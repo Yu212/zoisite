@@ -1,0 +1,17 @@
+[package]
+name = "untitled-lang-fuzz"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[[bin]]
+name = "main"
+path = "fuzz_targets/main.rs"
+
+[dependencies]
+libfuzzer-sys = "0.4.7"
+untitled-lang = { path = ".." }

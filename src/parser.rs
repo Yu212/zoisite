@@ -137,7 +137,7 @@ impl Marker {
             pos: self.pos
         }
     }
-    pub fn abandon(mut self, p: &mut Parser<'_>) {
+    pub fn abandon(mut self) {
         self.bomb.defuse();
     }
 }

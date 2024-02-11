@@ -1,0 +1,29 @@
+---
+source: src/lexer.rs
+expression: "tokenize(\"123 456\")"
+---
+(
+    [
+        Token {
+            kind: Number,
+            text: "123",
+            range: 0..3,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 3..4,
+        },
+        Token {
+            kind: Number,
+            text: "456",
+            range: 4..7,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 7..7,
+        },
+    ],
+    [],
+)

@@ -72,3 +72,20 @@ impl<'a> Lexer<'a> {
         SyntaxKind::Number
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::lexer::Lexer;
+    use crate::syntax_error::SyntaxError;
+    use crate::token::Token;
+
+    fn tokenize<'a>(text: &'a str) -> (Vec<Token<'a>>, Vec<SyntaxError>) {
+        let lexer = Lexer::new(text);
+        lexer.tokenize()
+    }
+
+    #[test]
+    fn number() {
+        insta::assert_debug_snapshot!(tokenize("123 456"));
+    }
+}

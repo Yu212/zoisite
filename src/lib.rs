@@ -1,24 +1,23 @@
 use inkwell::context::Context;
 use inkwell::OptimizationLevel;
-
 use crate::compiler::Compiler;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
-mod parser;
-mod grammar;
-mod language;
-mod lexer;
-mod event;
-mod syntax_error;
-mod ast;
-mod token;
-mod syntax_kind;
-mod hir;
-mod compiler;
+pub mod parser;
+pub mod grammar;
+pub mod language;
+pub mod lexer;
+pub mod event;
+pub mod syntax_error;
+pub mod ast;
+pub mod token;
+pub mod syntax_kind;
+pub mod hir;
+pub mod compiler;
+pub mod validate;
 
-fn main() {
-    let text = " 123 + 6 * 4";
+pub fn parse(text: &str) {
     let lexer = Lexer::new(text);
     let (tokens, lexer_errors) = lexer.tokenize();
     let parser = Parser::new(tokens);
@@ -27,18 +26,23 @@ fn main() {
     println!("{:?}", text);
     println!();
     println!("lexer errors: ");
-    for err in lexer_errors {
+    for err in &lexer_errors {
         println!("{:?}@{:?}", err.message, err.range);
     }
     println!();
     println!("parser errors: ");
-    for err in parser_errors {
+    for err in &parser_errors {
         println!("{:?}@{:?}", err.message, err.range);
     }
     println!();
     println!("tree: ");
     println!("{:#?}", syntax);
     let root = ast::Root::cast(syntax).unwrap();
+
+    // if validate::validate(root) {
+    //     return;
+    // }
+
     let hir = hir::lower_root(root);
     println!("hir: ");
     println!("{:?}", hir);
