@@ -46,3 +46,23 @@ pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
     p.expect(SyntaxKind::Number);
     m.complete(p, SyntaxKind::Literal)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::language::SyntaxNode;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use crate::syntax_error::SyntaxError;
+
+    fn parse(text: &str) -> (SyntaxNode, Vec<SyntaxError>) {
+        let lexer = Lexer::new(text);
+        let (tokens, _) = lexer.tokenize();
+        let parser = Parser::new(tokens);
+        parser.parse()
+    }
+
+    #[test]
+    fn expr() {
+        insta::assert_debug_snapshot!(parse("1 + 2 * 3"));
+    }
+}

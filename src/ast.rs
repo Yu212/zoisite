@@ -34,8 +34,7 @@ impl Expr {
     pub fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
             SyntaxKind::InfixExpr => BinaryExpr::cast(node).map(Self::BinaryExpr),
-            // SyntaxKind::InfixExpr => Some(Self::BinaryExpr(BinaryExpr::cast(node).unwrap())),
-            SyntaxKind::Literal => Some(Self::Literal(Literal::cast(node).unwrap())),
+            SyntaxKind::Literal => Literal::cast(node).map(Self::Literal),
             _ => None
         }
     }
