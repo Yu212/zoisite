@@ -6,7 +6,7 @@ pub enum SyntaxKind {
     Root,
     Plus,
     Star,
-    InfixExpr,
+    BinaryExpr,
     Number,
     Literal,
     Whitespace,

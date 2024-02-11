@@ -1,5 +1,8 @@
 use inkwell::context::Context;
 use inkwell::OptimizationLevel;
+use rowan::ast::AstNode;
+
+use crate::ast::Root;
 use crate::compiler::Compiler;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
@@ -37,7 +40,7 @@ pub fn parse(text: &str) {
     println!();
     println!("tree: ");
     println!("{:#?}", syntax);
-    let root = ast::Root::cast(syntax).unwrap();
+    let root = Root::cast(syntax).unwrap();
     let validation_errors = validation::validate(&root);
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
         return;

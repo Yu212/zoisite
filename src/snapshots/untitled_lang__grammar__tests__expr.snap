@@ -4,13 +4,13 @@ expression: "parse(\"1 + 2 * 3\")"
 ---
 (
     Root@0..9
-      InfixExpr@0..9
+      BinaryExpr@0..9
         Literal@0..2
           Number@0..1 "1"
           Whitespace@1..2 " "
         Plus@2..3 "+"
         Whitespace@3..4 " "
-        InfixExpr@4..9
+        BinaryExpr@4..9
           Literal@4..6
             Number@4..5 "2"
             Whitespace@5..6 " "

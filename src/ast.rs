@@ -1,26 +1,43 @@
+use rowan::ast::AstNode;
 use rowan::SyntaxElement;
 
-use crate::language::{SyntaxNode, SyntaxToken};
+use crate::language::{MyLanguage, SyntaxNode, SyntaxToken};
 use crate::syntax_kind::SyntaxKind;
 
-#[derive(Debug)]
-pub struct Root(SyntaxNode);
+macro_rules! ast {
+    ($name:ident) => {
+        #[derive(Debug)]
+        pub struct $name(SyntaxNode);
+
+        impl AstNode for $name {
+            type Language = MyLanguage;
+
+            fn can_cast(kind: SyntaxKind) -> bool {
+                kind == SyntaxKind::$name
+            }
+
+            fn cast(node: SyntaxNode) -> Option<Self> {
+                if node.kind() == SyntaxKind::$name {
+                    Some(Self(node))
+                } else {
+                    None
+                }
+            }
+
+            fn syntax(&self) -> &SyntaxNode {
+                &self.0
+            }
+        }
+    };
+}
+
+ast!(Root);
+ast!(BinaryExpr);
+ast!(Literal);
 
 impl Root {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
-    }
-
-    pub fn cast(node: SyntaxNode) -> Option<Self> {
-        if node.kind() == SyntaxKind::Root {
-            Some(Self(node))
-        } else {
-            None
-        }
-    }
-
-    pub fn syntax(&self) -> &SyntaxNode {
-        &self.0
     }
 }
 
@@ -33,29 +50,14 @@ pub enum Expr {
 impl Expr {
     pub fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
-            SyntaxKind::InfixExpr => BinaryExpr::cast(node).map(Self::BinaryExpr),
+            SyntaxKind::BinaryExpr => BinaryExpr::cast(node).map(Self::BinaryExpr),
             SyntaxKind::Literal => Literal::cast(node).map(Self::Literal),
             _ => None
         }
     }
 }
 
-#[derive(Debug)]
-pub struct BinaryExpr(SyntaxNode);
-
 impl BinaryExpr {
-    pub fn cast(node: SyntaxNode) -> Option<Self> {
-        if node.kind() == SyntaxKind::InfixExpr {
-            Some(Self(node))
-        } else {
-            None
-        }
-    }
-
-    pub fn syntax(&self) -> &SyntaxNode {
-        &self.0
-    }
-
     pub fn lhs(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
     }
@@ -71,23 +73,8 @@ impl BinaryExpr {
     }
 }
 
-#[derive(Debug)]
-pub struct Literal(SyntaxNode);
-
 impl Literal {
-    pub fn cast(node: SyntaxNode) -> Option<Self> {
-        if node.kind() == SyntaxKind::Literal {
-            Some(Self(node))
-        } else {
-            None
-        }
-    }
-
     pub fn parse(&self) -> Option<u64> {
         self.0.first_token()?.text().parse().ok()
-    }
-
-    pub fn syntax(&self) -> &SyntaxNode {
-        &self.0
     }
 }

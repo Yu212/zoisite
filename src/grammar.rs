@@ -24,7 +24,7 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
         p.bump();
         let m = lhs.precede(p);
         let rhs = expr(p, right_binding_power);
-        lhs = m.complete(p, SyntaxKind::InfixExpr);
+        lhs = m.complete(p, SyntaxKind::BinaryExpr);
         if rhs.is_none() {
             break;
         }

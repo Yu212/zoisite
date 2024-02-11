@@ -1,8 +1,10 @@
-use crate::ast;
+use rowan::ast::AstNode;
+
 use crate::ast::Literal;
+use crate::ast::Root;
 use crate::syntax_error::SyntaxError;
 
-pub fn validate(root: &ast::Root) -> Vec<SyntaxError> {
+pub fn validate(root: &Root) -> Vec<SyntaxError> {
     let mut errors = Vec::new();
     for node in root.syntax().descendants() {
         if let Some(literal) = Literal::cast(node) {
