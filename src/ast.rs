@@ -18,6 +18,10 @@ impl Root {
             None
         }
     }
+
+    pub fn syntax(&self) -> &SyntaxNode {
+        &self.0
+    }
 }
 
 #[derive(Debug)]
@@ -29,8 +33,9 @@ pub enum Expr {
 impl Expr {
     pub fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
-            SyntaxKind::InfixExpr => Some(Self::BinaryExpr(BinaryExpr(node))),
-            SyntaxKind::Literal => Some(Self::Literal(Literal(node))),
+            SyntaxKind::InfixExpr => BinaryExpr::cast(node).map(Self::BinaryExpr),
+            // SyntaxKind::InfixExpr => Some(Self::BinaryExpr(BinaryExpr::cast(node).unwrap())),
+            SyntaxKind::Literal => Some(Self::Literal(Literal::cast(node).unwrap())),
             _ => None
         }
     }
@@ -40,6 +45,18 @@ impl Expr {
 pub struct BinaryExpr(SyntaxNode);
 
 impl BinaryExpr {
+    pub fn cast(node: SyntaxNode) -> Option<Self> {
+        if node.kind() == SyntaxKind::InfixExpr {
+            Some(Self(node))
+        } else {
+            None
+        }
+    }
+
+    pub fn syntax(&self) -> &SyntaxNode {
+        &self.0
+    }
+
     pub fn lhs(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
     }
@@ -59,7 +76,19 @@ impl BinaryExpr {
 pub struct Literal(SyntaxNode);
 
 impl Literal {
+    pub fn cast(node: SyntaxNode) -> Option<Self> {
+        if node.kind() == SyntaxKind::Literal {
+            Some(Self(node))
+        } else {
+            None
+        }
+    }
+
     pub fn parse(&self) -> Option<u64> {
         self.0.first_token()?.text().parse().ok()
+    }
+
+    pub fn syntax(&self) -> &SyntaxNode {
+        &self.0
     }
 }

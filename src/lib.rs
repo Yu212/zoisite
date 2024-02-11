@@ -15,7 +15,7 @@ pub mod token;
 pub mod syntax_kind;
 pub mod hir;
 pub mod compiler;
-pub mod validate;
+pub mod validation;
 
 pub fn parse(text: &str) {
     let lexer = Lexer::new(text);
@@ -38,10 +38,10 @@ pub fn parse(text: &str) {
     println!("tree: ");
     println!("{:#?}", syntax);
     let root = ast::Root::cast(syntax).unwrap();
-
-    // if validate::validate(root) {
-    //     return;
-    // }
+    let validation_errors = validation::validate(&root);
+    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
+        return;
+    }
 
     let hir = hir::lower_root(root);
     println!("hir: ");
