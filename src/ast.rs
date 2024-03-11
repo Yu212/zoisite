@@ -4,6 +4,18 @@ use rowan::SyntaxElement;
 use crate::language::{MyLanguage, SyntaxNode, SyntaxToken};
 use crate::syntax_kind::SyntaxKind;
 
+macro_rules! asts {
+    () => {};
+    ($name:ident; $($rest:tt)*) => {
+        ast!($name);
+        asts!($($rest)*);
+    };
+    ($name:ident $body:tt; $($rest:tt)*) => {
+        ast!($name $body);
+        asts!($($rest)*);
+    };
+}
+
 macro_rules! ast {
     ($name:ident) => {
         #[derive(Debug)]
@@ -29,31 +41,48 @@ macro_rules! ast {
             }
         }
     };
+    ($name:ident [$($item:ident,)*]) => {
+        #[derive(Debug)]
+        pub enum $name {
+            $($item($item),)*
+        }
+
+        impl AstNode for $name {
+            type Language = MyLanguage;
+
+            fn can_cast(kind: SyntaxKind) -> bool {
+                matches!(kind, $(SyntaxKind::$item)|*)
+            }
+
+            fn cast(node: SyntaxNode) -> Option<Self> {
+                match node.kind() {
+                    $(SyntaxKind::$item => $item::cast(node).map(Self::$item),)*
+                    _ => None,
+                }
+            }
+
+            fn syntax(&self) -> &SyntaxNode {
+                match self {
+                    $(Self::$item(v) => v.syntax(),)*
+                }
+            }
+        }
+    };
 }
 
-ast!(Root);
-ast!(BinaryExpr);
-ast!(Literal);
+asts! {
+    Root;
+    BinaryExpr;
+    Literal;
+    Expr [
+        BinaryExpr,
+        Literal,
+    ];
+}
 
 impl Root {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
-    }
-}
-
-#[derive(Debug)]
-pub enum Expr {
-    BinaryExpr(BinaryExpr),
-    Literal(Literal),
-}
-
-impl Expr {
-    pub fn cast(node: SyntaxNode) -> Option<Self> {
-        match node.kind() {
-            SyntaxKind::BinaryExpr => BinaryExpr::cast(node).map(Self::BinaryExpr),
-            SyntaxKind::Literal => Literal::cast(node).map(Self::Literal),
-            _ => None
-        }
     }
 }
 
