@@ -88,4 +88,9 @@ mod tests {
     fn number() {
         insta::assert_debug_snapshot!(tokenize("123 456"));
     }
+
+    #[test]
+    fn operator() {
+        insta::assert_debug_snapshot!(tokenize("+ *"));
+    }
 }
