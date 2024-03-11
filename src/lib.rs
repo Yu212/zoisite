@@ -20,6 +20,26 @@ pub mod hir;
 pub mod compiler;
 pub mod validation;
 
+pub fn parse_no_output(text: &str) {
+    let lexer = Lexer::new(text);
+    let (tokens, lexer_errors) = lexer.tokenize();
+    let parser = Parser::new(tokens);
+    let (syntax, parser_errors) = parser.parse();
+    let root = Root::cast(syntax).unwrap();
+    let validation_errors = validation::validate(&root);
+    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
+        return;
+    }
+    let hir = hir::lower_root(root);
+    let context = Context::create();
+    let compiler = Compiler::new(&context, "main");
+    let module = compiler.compile(hir);
+    let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
+    unsafe {
+        engine.get_function::<unsafe extern "C" fn() -> i32>("main").unwrap().call();
+    }
+}
+
 pub fn parse(text: &str) {
     let lexer = Lexer::new(text);
     let (tokens, lexer_errors) = lexer.tokenize();
