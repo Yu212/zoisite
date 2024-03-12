@@ -4,6 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::ast::Root;
 use crate::compiler::Compiler;
+use crate::database::Database;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
@@ -19,6 +20,7 @@ pub mod syntax_kind;
 pub mod hir;
 pub mod compiler;
 pub mod validation;
+pub mod database;
 
 pub fn parse_no_output(text: &str) {
     let lexer = Lexer::new(text);
@@ -30,10 +32,11 @@ pub fn parse_no_output(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
         return;
     }
-    let hir = hir::lower_root(root);
+    let mut db = Database::default();
+    let hir = db.lower_root(root);
     let context = Context::create();
-    let compiler = Compiler::new(&context, "main");
-    let module = compiler.compile(hir);
+    let compiler = Compiler::new(&context, db, "main");
+    let module = compiler.compile(&hir);
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
     unsafe {
         engine.get_function::<unsafe extern "C" fn() -> i32>("main").unwrap().call();
@@ -65,12 +68,13 @@ pub fn parse(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
         return;
     }
-    let hir = hir::lower_root(root);
+    let mut db = Database::default();
+    let hir = db.lower_root(root);
     println!("hir: ");
     println!("{:?}", hir);
     let context = Context::create();
-    let compiler = Compiler::new(&context, "main");
-    let module = compiler.compile(hir);
+    let compiler = Compiler::new(&context, db, "main");
+    let module = compiler.compile(&hir);
     println!("llvm ir:");
     module.print_to_stderr();
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
