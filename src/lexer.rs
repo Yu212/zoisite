@@ -1,15 +1,14 @@
 use rowan::{TextRange, TextSize};
 use unscanny::Scanner;
 
-use crate::syntax_error::SyntaxError;
+use crate::diagnostic::{Diagnostic, DiagnosticKind};
 use crate::syntax_kind::SyntaxKind;
 use crate::token::Token;
 
 pub struct Lexer<'a> {
     s: Scanner<'a>,
     tokens: Vec<Token<'a>>,
-    errors: Vec<SyntaxError>,
-    error: Option<String>,
+    current_diagnostic_kind: Option<DiagnosticKind>,
 }
 
 impl<'a> Lexer<'a> {
@@ -17,12 +16,12 @@ impl<'a> Lexer<'a> {
         Self {
             s: Scanner::new(text),
             tokens: Vec::new(),
-            errors: Vec::new(),
-            error: None,
+            current_diagnostic_kind: None,
         }
     }
 
-    pub fn tokenize(mut self) -> (Vec<Token<'a>>, Vec<SyntaxError>) {
+    pub fn tokenize(mut self) -> (Vec<Token<'a>>, Vec<Diagnostic>) {
+        let mut diagnostics = Vec::new();
         loop {
             let start = self.s.cursor();
             let kind = self.identify_token();
@@ -34,20 +33,17 @@ impl<'a> Lexer<'a> {
                 text,
                 range,
             });
-            if let Some(message) = self.error.take() {
-                self.errors.push(SyntaxError {
-                    message,
-                    range,
-                });
+            if let Some(diagnostic_kind) = self.current_diagnostic_kind.take() {
+                diagnostics.push(Diagnostic::new(diagnostic_kind, range));
             }
             if kind.is_eof() {
-                return (self.tokens, self.errors)
+                return (self.tokens, diagnostics);
             }
         }
     }
 
-    fn error(&mut self, message: impl Into<String>) -> SyntaxKind {
-        self.error = Some(message.into());
+    fn error(&mut self, diagnostic_kind: DiagnosticKind) -> SyntaxKind {
+        self.current_diagnostic_kind = Some(diagnostic_kind);
         SyntaxKind::Error
     }
 
@@ -58,7 +54,7 @@ impl<'a> Lexer<'a> {
             Some('+') => SyntaxKind::Plus,
             Some('*') => SyntaxKind::Star,
             None => SyntaxKind::Eof,
-            _ => self.error("Unexpected character"),
+            _ => self.error(DiagnosticKind::UnexpectedCharacter),
         }
     }
 
@@ -75,11 +71,11 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::diagnostic::Diagnostic;
     use crate::lexer::Lexer;
-    use crate::syntax_error::SyntaxError;
     use crate::token::Token;
 
-    fn tokenize<'a>(text: &'a str) -> (Vec<Token<'a>>, Vec<SyntaxError>) {
+    fn tokenize<'a>(text: &'a str) -> (Vec<Token<'a>>, Vec<Diagnostic>) {
         let lexer = Lexer::new(text);
         lexer.tokenize()
     }

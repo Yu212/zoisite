@@ -33,28 +33,29 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
 }
 
 pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
-    if p.at(SyntaxKind::Number) {
+    if p.expect(SyntaxKind::Number) {
         Some(number(p))
     } else {
-        p.error("expected: number");
         None
     }
 }
 
 pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
-    p.expect(SyntaxKind::Number);
+    if p.expect(SyntaxKind::Number) {
+        p.bump();
+    }
     m.complete(p, SyntaxKind::Literal)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::diagnostic::Diagnostic;
     use crate::language::SyntaxNode;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
-    use crate::syntax_error::SyntaxError;
 
-    fn parse(text: &str) -> (SyntaxNode, Vec<SyntaxError>) {
+    fn parse(text: &str) -> (SyntaxNode, Vec<Diagnostic>) {
         let lexer = Lexer::new(text);
         let (tokens, _) = lexer.tokenize();
         let parser = Parser::new(tokens);

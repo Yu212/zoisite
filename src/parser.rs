@@ -1,11 +1,11 @@
 use drop_bomb::DropBomb;
 use rowan::TextRange;
 
+use crate::diagnostic::{Diagnostic, DiagnosticKind};
 use crate::event;
 use crate::event::Event;
 use crate::grammar::root;
 use crate::language::SyntaxNode;
-use crate::syntax_error::SyntaxError;
 use crate::syntax_kind::SyntaxKind;
 use crate::token::Token;
 
@@ -23,7 +23,7 @@ impl<'a> Parser<'a> {
             events: Vec::new(),
         }
     }
-    pub fn parse(mut self) -> (SyntaxNode, Vec<SyntaxError>) {
+    pub fn parse(mut self) -> (SyntaxNode, Vec<Diagnostic>) {
         root(&mut self);
         event::process(&mut self.events, self.tokens)
     }
@@ -74,34 +74,34 @@ impl<'a> Parser<'a> {
         }
     }
     pub fn expect(&mut self, kind: SyntaxKind) -> bool {
-        if self.eat(kind) {
+        if self.at(kind) {
             true
         } else {
-            self.error(format!("expected: {kind:?}"));
+            self.error(DiagnosticKind::UnexpectedToken {
+                expected: vec![kind],
+                actual: self.current(),
+            });
             false
         }
     }
     pub fn eof(&self) -> bool {
         self.at(SyntaxKind::Eof)
     }
-    pub fn error(&mut self, message: impl Into<String>) {
-        self.events.push(Event::Error(SyntaxError {
-            message: message.into(),
-            range: self.current_range(),
-        }));
+    pub fn error(&mut self, diagnostic_kind: DiagnosticKind) {
+        self.events.push(Event::Error(Diagnostic::new(diagnostic_kind, self.current_range())));
     }
-    pub fn error_and_bump(&mut self, message: impl Into<String>) {
+    pub fn error_and_bump(&mut self, diagnostic_kind: DiagnosticKind) {
         let m = self.start();
-        self.error(message);
+        self.error(diagnostic_kind);
         self.bump();
         m.complete(self, SyntaxKind::Error);
     }
-    pub fn error_and_recover(&mut self, message: impl Into<String>, recovery: &[SyntaxKind]) {
+    pub fn error_and_recover(&mut self, diagnostic_kind: DiagnosticKind, recovery: &[SyntaxKind]) {
         if self.at_set(recovery) {
-            self.error(message);
+            self.error(diagnostic_kind);
             return;
         }
-        self.error_and_bump(message);
+        self.error_and_bump(diagnostic_kind);
     }
     pub fn eat_trivia(&mut self) {
         while self.current().is_trivia() {

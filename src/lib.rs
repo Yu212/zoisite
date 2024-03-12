@@ -12,7 +12,7 @@ pub mod grammar;
 pub mod language;
 pub mod lexer;
 pub mod event;
-pub mod syntax_error;
+pub mod diagnostic;
 pub mod ast;
 pub mod token;
 pub mod syntax_kind;
@@ -50,12 +50,12 @@ pub fn parse(text: &str) {
     println!();
     println!("lexer errors: ");
     for err in &lexer_errors {
-        println!("{:?}@{:?}", err.message, err.range);
+        println!("{:?}", err);
     }
     println!();
     println!("parser errors: ");
     for err in &parser_errors {
-        println!("{:?}@{:?}", err.message, err.range);
+        println!("{:?}", err);
     }
     println!();
     println!("tree: ");
@@ -65,7 +65,6 @@ pub fn parse(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
         return;
     }
-
     let hir = hir::lower_root(root);
     println!("hir: ");
     println!("{:?}", hir);

@@ -2,8 +2,8 @@ use std::mem;
 
 use rowan::GreenNodeBuilder;
 
+use crate::diagnostic::Diagnostic;
 use crate::language::SyntaxNode;
-use crate::syntax_error::SyntaxError;
 use crate::syntax_kind::SyntaxKind;
 use crate::token::Token;
 
@@ -12,12 +12,12 @@ pub enum Event {
     StartNode(SyntaxKind, Option<usize>),
     FinishNode,
     Token(SyntaxKind),
-    Error(SyntaxError),
+    Error(Diagnostic),
 }
 
-pub fn process(events: &mut Vec<Event>, tokens: Vec<Token>) -> (SyntaxNode, Vec<SyntaxError>) {
+pub fn process(events: &mut Vec<Event>, tokens: Vec<Token>) -> (SyntaxNode, Vec<Diagnostic>) {
+    let mut diagnostics = Vec::new();
     let mut builder = GreenNodeBuilder::new();
-    let mut errors = Vec::new();
     let mut forward_parents = Vec::new();
     let mut idx = 0;
     for i in 0..events.len() {
@@ -43,9 +43,9 @@ pub fn process(events: &mut Vec<Event>, tokens: Vec<Token>) -> (SyntaxNode, Vec<
                 builder.token(kind.into(), tokens[idx].text);
                 idx += 1;
             },
-            Event::Error(error) => errors.push(error),
+            Event::Error(diagnostic) => diagnostics.push(diagnostic),
             Event::Placeholder => {},
         }
     }
-    (SyntaxNode::new_root(builder.finish()), errors)
+    (SyntaxNode::new_root(builder.finish()), diagnostics)
 }
