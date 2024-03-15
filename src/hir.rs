@@ -23,14 +23,20 @@ pub enum Expr {
 #[derive(Debug)]
 pub enum BinaryOp {
     Add,
+    Sub,
     Mul,
+    Div,
+    Rem,
 }
 
 impl BinaryOp {
     pub fn binding_power(&self) -> (u8, u8) {
         match self {
             BinaryOp::Add => (1, 2),
+            BinaryOp::Sub => (1, 2),
             BinaryOp::Mul => (3, 4),
+            BinaryOp::Div => (3, 4),
+            BinaryOp::Rem => (3, 4),
         }
     }
 }

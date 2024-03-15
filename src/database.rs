@@ -26,7 +26,10 @@ impl Database {
     pub fn lower_binary_expr(&mut self, ast: ast::BinaryExpr) -> Expr {
         let op = match ast.op().unwrap().kind() {
             SyntaxKind::Plus => BinaryOp::Add,
+            SyntaxKind::Minus => BinaryOp::Sub,
             SyntaxKind::Star => BinaryOp::Mul,
+            SyntaxKind::Slash => BinaryOp::Div,
+            SyntaxKind::Percent => BinaryOp::Rem,
             _ => unreachable!(),
         };
         let lhs = self.lower_expr(ast.lhs());

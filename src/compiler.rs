@@ -52,7 +52,10 @@ impl<'ctx> Compiler<'ctx> {
                 let rhs_value = self.compile_expr(&self.db.exprs[*rhs])?;
                 match op {
                     BinaryOp::Add => self.builder.build_int_add(lhs_value, rhs_value, "add").ok(),
-                    BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "add").ok(),
+                    BinaryOp::Sub => self.builder.build_int_sub(lhs_value, rhs_value, "sub").ok(),
+                    BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "mul").ok(),
+                    BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
+                    BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
                 }
             },
             Expr::Literal { n } => {

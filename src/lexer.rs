@@ -52,7 +52,10 @@ impl<'a> Lexer<'a> {
             Some(c) if c.is_ascii_whitespace() => self.whitespace(),
             Some(c) if c.is_ascii_digit() => self.number(),
             Some('+') => SyntaxKind::Plus,
+            Some('-') => SyntaxKind::Minus,
             Some('*') => SyntaxKind::Star,
+            Some('/') => SyntaxKind::Slash,
+            Some('%') => SyntaxKind::Percent,
             None => SyntaxKind::Eof,
             _ => self.error(DiagnosticKind::UnexpectedCharacter),
         }
@@ -87,6 +90,6 @@ mod tests {
 
     #[test]
     fn operator() {
-        insta::assert_debug_snapshot!(tokenize("+ *"));
+        insta::assert_debug_snapshot!(tokenize("+ - * / %"));
     }
 }

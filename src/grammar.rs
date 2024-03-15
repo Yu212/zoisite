@@ -14,7 +14,10 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
     loop {
         let op = match p.current() {
             SyntaxKind::Plus => BinaryOp::Add,
+            SyntaxKind::Minus => BinaryOp::Sub,
             SyntaxKind::Star => BinaryOp::Mul,
+            SyntaxKind::Slash => BinaryOp::Div,
+            SyntaxKind::Percent => BinaryOp::Rem,
             _ => break,
         };
         let (left_binding_power, right_binding_power) = op.binding_power();

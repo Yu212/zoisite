@@ -1,6 +1,6 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"+ *\")"
+expression: "tokenize(\"+ - * / %\")"
 ---
 (
     [
@@ -15,14 +15,44 @@ expression: "tokenize(\"+ *\")"
             range: 1..2,
         },
         Token {
+            kind: Minus,
+            text: "-",
+            range: 2..3,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 3..4,
+        },
+        Token {
             kind: Star,
             text: "*",
-            range: 2..3,
+            range: 4..5,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 5..6,
+        },
+        Token {
+            kind: Slash,
+            text: "/",
+            range: 6..7,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 7..8,
+        },
+        Token {
+            kind: Percent,
+            text: "%",
+            range: 8..9,
         },
         Token {
             kind: Eof,
             text: "",
-            range: 3..3,
+            range: 9..9,
         },
     ],
     [],

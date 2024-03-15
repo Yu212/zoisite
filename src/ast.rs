@@ -98,7 +98,7 @@ impl BinaryExpr {
     pub fn op(&self) -> Option<SyntaxToken> {
         self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
-            .find(|token| matches!(token.kind(), SyntaxKind::Plus | SyntaxKind::Star))
+            .find(|token| matches!(token.kind(), SyntaxKind::Plus | SyntaxKind::Minus | SyntaxKind::Star | SyntaxKind::Slash | SyntaxKind::Percent))
     }
 }
 
