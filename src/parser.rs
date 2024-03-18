@@ -73,6 +73,14 @@ impl<'a> Parser<'a> {
             self.eat_trivia();
         }
     }
+    pub fn expect_eat(&mut self, kind: SyntaxKind) -> bool {
+        if self.expect(kind) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
     pub fn expect(&mut self, kind: SyntaxKind) -> bool {
         if self.at(kind) {
             true

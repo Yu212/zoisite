@@ -74,10 +74,12 @@ asts! {
     Root;
     BinaryExpr;
     PrefixExpr;
+    ParenExpr;
     Literal;
     Expr [
         BinaryExpr,
         PrefixExpr,
+        ParenExpr,
         Literal,
     ];
 }
@@ -113,6 +115,12 @@ impl PrefixExpr {
         self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
             .find(|token| token.kind() == SyntaxKind::Minus)
+    }
+}
+
+impl ParenExpr {
+    pub fn expr(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
     }
 }
 

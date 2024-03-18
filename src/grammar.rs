@@ -36,12 +36,13 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
 }
 
 pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
-    if !p.expect_set(&[SyntaxKind::Number, SyntaxKind::Minus]) {
+    if !p.expect_set(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen]) {
         return None
     }
     match p.current() {
         SyntaxKind::Number => Some(number(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
+        SyntaxKind::OpenParen => Some(paren_expr(p)),
         _ => unreachable!()
     }
 }
@@ -54,6 +55,15 @@ pub fn prefix_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let ((), right_binding_power) = op.binding_power();
     expr(p, right_binding_power);
     m.complete(p, SyntaxKind::PrefixExpr)
+}
+
+pub fn paren_expr(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::OpenParen));
+    let m = p.start();
+    p.bump();
+    expr(p, 0);
+    p.expect_eat(SyntaxKind::CloseParen);
+    m.complete(p, SyntaxKind::ParenExpr)
 }
 
 pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
@@ -85,5 +95,10 @@ mod tests {
     #[test]
     fn unary() {
         insta::assert_debug_snapshot!(parse("-1 * -2"));
+    }
+
+    #[test]
+    fn paren() {
+        insta::assert_debug_snapshot!(parse("(1 + 2) * 3"));
     }
 }

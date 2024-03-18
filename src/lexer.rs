@@ -56,6 +56,8 @@ impl<'a> Lexer<'a> {
             Some('*') => SyntaxKind::Star,
             Some('/') => SyntaxKind::Slash,
             Some('%') => SyntaxKind::Percent,
+            Some('(') => SyntaxKind::OpenParen,
+            Some(')') => SyntaxKind::CloseParen,
             None => SyntaxKind::Eof,
             _ => self.error(DiagnosticKind::UnexpectedCharacter),
         }
@@ -91,5 +93,10 @@ mod tests {
     #[test]
     fn operator() {
         insta::assert_debug_snapshot!(tokenize("+ - * / %"));
+    }
+
+    #[test]
+    fn paren() {
+        insta::assert_debug_snapshot!(tokenize("( )"));
     }
 }

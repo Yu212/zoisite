@@ -20,6 +20,7 @@ impl Database {
         match ast {
             Some(ast::Expr::BinaryExpr(ast)) => self.lower_binary_expr(ast),
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
+            Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
             Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
             None => Expr::Missing,
         }

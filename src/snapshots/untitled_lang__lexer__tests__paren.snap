@@ -1,0 +1,29 @@
+---
+source: src/lexer.rs
+expression: "tokenize(\"( )\")"
+---
+(
+    [
+        Token {
+            kind: OpenParen,
+            text: "(",
+            range: 0..1,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 1..2,
+        },
+        Token {
+            kind: CloseParen,
+            text: ")",
+            range: 2..3,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 3..3,
+        },
+    ],
+    [],
+)
