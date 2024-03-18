@@ -5,7 +5,7 @@ use inkwell::module::Module;
 use inkwell::values::IntValue;
 
 use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, Root};
+use crate::hir::{BinaryOp, Expr, Root, UnaryOp};
 
 pub struct Compiler<'ctx> {
     pub db: Database,
@@ -56,6 +56,12 @@ impl<'ctx> Compiler<'ctx> {
                     BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "mul").ok(),
                     BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
                     BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
+                }
+            },
+            Expr::Unary { op, expr } => {
+                let expr_value = self.compile_expr(&self.db.exprs[*expr])?;
+                match op {
+                    UnaryOp::Neg => self.builder.build_int_neg(expr_value, "neg").ok(),
                 }
             },
             Expr::Literal { n } => {

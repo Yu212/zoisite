@@ -84,6 +84,17 @@ impl<'a> Parser<'a> {
             false
         }
     }
+    pub fn expect_set(&mut self, set: &[SyntaxKind]) -> bool {
+        if self.at_set(set) {
+            true
+        } else {
+            self.error(DiagnosticKind::UnexpectedToken {
+                expected: set.to_vec(),
+                actual: self.current(),
+            });
+            false
+        }
+    }
     pub fn eof(&self) -> bool {
         self.at(SyntaxKind::Eof)
     }

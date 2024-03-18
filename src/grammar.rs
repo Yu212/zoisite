@@ -1,4 +1,4 @@
-use crate::hir::BinaryOp;
+use crate::hir::{BinaryOp, UnaryOp};
 use crate::parser::{CompletedMarker, Parser};
 use crate::syntax_kind::SyntaxKind;
 
@@ -36,18 +36,30 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
 }
 
 pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
-    if p.expect(SyntaxKind::Number) {
-        Some(number(p))
-    } else {
-        None
+    if !p.expect_set(&[SyntaxKind::Number, SyntaxKind::Minus]) {
+        return None
+    }
+    match p.current() {
+        SyntaxKind::Number => Some(number(p)),
+        SyntaxKind::Minus => Some(prefix_expr(p)),
+        _ => unreachable!()
     }
 }
 
-pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn prefix_expr(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::Minus));
     let m = p.start();
-    if p.expect(SyntaxKind::Number) {
-        p.bump();
-    }
+    p.bump();
+    let op = UnaryOp::Neg;
+    let ((), right_binding_power) = op.binding_power();
+    expr(p, right_binding_power);
+    m.complete(p, SyntaxKind::PrefixExpr)
+}
+
+pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::Number));
+    let m = p.start();
+    p.bump();
     m.complete(p, SyntaxKind::Literal)
 }
 
@@ -68,5 +80,10 @@ mod tests {
     #[test]
     fn expr() {
         insta::assert_debug_snapshot!(parse("1 + 2 * 3"));
+    }
+
+    #[test]
+    fn unary() {
+        insta::assert_debug_snapshot!(parse("-1 * -2"));
     }
 }

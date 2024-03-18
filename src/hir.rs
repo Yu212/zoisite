@@ -15,6 +15,10 @@ pub enum Expr {
         lhs: ExprIdx,
         rhs: ExprIdx,
     },
+    Unary {
+        op: UnaryOp,
+        expr: ExprIdx,
+    },
     Literal {
         n: Option<u64>,
     }
@@ -37,6 +41,19 @@ impl BinaryOp {
             BinaryOp::Mul => (3, 4),
             BinaryOp::Div => (3, 4),
             BinaryOp::Rem => (3, 4),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum UnaryOp {
+    Neg,
+}
+
+impl UnaryOp {
+    pub fn binding_power(&self) -> ((), u8) {
+        match self {
+            UnaryOp::Neg => ((), 5),
         }
     }
 }

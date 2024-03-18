@@ -12,6 +12,7 @@ pub enum SyntaxKind {
     BinaryExpr,
     Number,
     Literal,
+    PrefixExpr,
     Whitespace,
 }
 

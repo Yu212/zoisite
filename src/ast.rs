@@ -73,9 +73,11 @@ macro_rules! ast {
 asts! {
     Root;
     BinaryExpr;
+    PrefixExpr;
     Literal;
     Expr [
         BinaryExpr,
+        PrefixExpr,
         Literal,
     ];
 }
@@ -99,6 +101,18 @@ impl BinaryExpr {
         self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
             .find(|token| matches!(token.kind(), SyntaxKind::Plus | SyntaxKind::Minus | SyntaxKind::Star | SyntaxKind::Slash | SyntaxKind::Percent))
+    }
+}
+
+impl PrefixExpr {
+    pub fn expr(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
+    }
+
+    pub fn op(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Minus)
     }
 }
 
