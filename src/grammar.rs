@@ -1,3 +1,4 @@
+use crate::diagnostic::DiagnosticKind;
 use crate::hir::{BinaryOp, UnaryOp};
 use crate::parser::{CompletedMarker, Parser};
 use crate::syntax_kind::SyntaxKind;
@@ -36,14 +37,17 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
 }
 
 pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
-    if !p.expect_set(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen]) {
-        return None
-    }
     match p.current() {
         SyntaxKind::Number => Some(number(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
-        _ => unreachable!()
+        kind => {
+            p.error(DiagnosticKind::UnexpectedToken {
+                expected: vec![SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen],
+                actual: kind,
+            });
+            None
+        }
     }
 }
 
@@ -62,7 +66,7 @@ pub fn paren_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     expr(p, 0);
-    p.expect_eat(SyntaxKind::CloseParen);
+    p.expect(SyntaxKind::CloseParen);
     m.complete(p, SyntaxKind::ParenExpr)
 }
 

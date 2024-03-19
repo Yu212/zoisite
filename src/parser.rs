@@ -73,16 +73,8 @@ impl<'a> Parser<'a> {
             self.eat_trivia();
         }
     }
-    pub fn expect_eat(&mut self, kind: SyntaxKind) -> bool {
-        if self.expect(kind) {
-            self.bump();
-            true
-        } else {
-            false
-        }
-    }
     pub fn expect(&mut self, kind: SyntaxKind) -> bool {
-        if self.at(kind) {
+        if self.eat(kind) {
             true
         } else {
             self.error(DiagnosticKind::UnexpectedToken {
@@ -91,20 +83,6 @@ impl<'a> Parser<'a> {
             });
             false
         }
-    }
-    pub fn expect_set(&mut self, set: &[SyntaxKind]) -> bool {
-        if self.at_set(set) {
-            true
-        } else {
-            self.error(DiagnosticKind::UnexpectedToken {
-                expected: set.to_vec(),
-                actual: self.current(),
-            });
-            false
-        }
-    }
-    pub fn eof(&self) -> bool {
-        self.at(SyntaxKind::Eof)
     }
     pub fn error(&mut self, diagnostic_kind: DiagnosticKind) {
         self.events.push(Event::Error(Diagnostic::new(diagnostic_kind, self.current_range())));
