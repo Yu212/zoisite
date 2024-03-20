@@ -2,21 +2,23 @@
 #[repr(u16)]
 pub enum SyntaxKind {
     Error,
+    Whitespace,
     Eof,
-    Root,
+    Semicolon,
     Plus,
     Minus,
     Star,
     Slash,
     Percent,
-    BinaryExpr,
     Number,
     OpenParen,
     CloseParen,
-    ParenExpr,
+    Root,
     Literal,
+    BinaryExpr,
+    ParenExpr,
     PrefixExpr,
-    Whitespace,
+    Stmt,
 }
 
 impl SyntaxKind {

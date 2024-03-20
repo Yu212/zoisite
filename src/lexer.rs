@@ -51,6 +51,7 @@ impl<'a> Lexer<'a> {
         match self.s.eat() {
             Some(c) if c.is_ascii_whitespace() => self.whitespace(),
             Some(c) if c.is_ascii_digit() => self.number(),
+            Some(';') => SyntaxKind::Semicolon,
             Some('+') => SyntaxKind::Plus,
             Some('-') => SyntaxKind::Minus,
             Some('*') => SyntaxKind::Star,

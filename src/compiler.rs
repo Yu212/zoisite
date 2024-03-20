@@ -5,7 +5,7 @@ use inkwell::module::Module;
 use inkwell::values::IntValue;
 
 use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, Root, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Root, Stmt, UnaryOp};
 
 pub struct Compiler<'ctx> {
     pub db: Database,
@@ -27,22 +27,27 @@ impl<'ctx> Compiler<'ctx> {
     }
     pub fn compile(self, root: &Root) -> Module<'ctx> {
         let i32_type = self.context.i32_type();
-        let i8_ptr_type = self.context.i8_type().ptr_type(AddressSpace::default());
-        let void_type = self.context.void_type();
-        let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
-        let printf_function = self.module.add_function("printf", printf_type, None);
         let fn_type = i32_type.fn_type(&[], false);
         let function = self.module.add_function("main", fn_type, None);
         let basic_block = self.context.append_basic_block(function, "entry");
         self.builder.position_at_end(basic_block);
-        let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
-        let result = self.compile_root(&root).unwrap();
-        let _ = self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), result.into()], "printf_ret");
+        self.compile_root(&root);
         self.builder.build_return(Some(&i32_type.const_int(0, false))).unwrap();
         self.module
     }
-    fn compile_root(&self, root: &Root) -> Option<IntValue<'ctx>> {
-        self.compile_expr(&self.db.exprs[root.expr])
+    fn compile_root(&self, root: &Root) {
+        let i8_ptr_type = self.context.i8_type().ptr_type(AddressSpace::default());
+        let void_type = self.context.void_type();
+        let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
+        let printf_function = self.module.add_function("printf", printf_type, None);
+        let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
+        for &stmt in &root.stmts {
+            let result = self.compile_stmt(&self.db.stmts[stmt]).unwrap();
+            let _ = self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), result.into()], "printf_ret");
+        }
+    }
+    fn compile_stmt(&self, stmt: &Stmt) -> Option<IntValue<'ctx>> {
+        self.compile_expr(&self.db.exprs[stmt.expr])
     }
     fn compile_expr(&self, expr: &Expr) -> Option<IntValue<'ctx>> {
         match expr {

@@ -1,18 +1,27 @@
 use la_arena::Arena;
 
 use crate::ast;
-use crate::hir::{BinaryOp, Expr, Root, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Root, Stmt, UnaryOp};
 use crate::syntax_kind::SyntaxKind;
 
 #[derive(Default)]
 pub struct Database {
     pub exprs: Arena<Expr>,
+    pub stmts: Arena<Stmt>,
 }
 
 impl Database {
     pub fn lower_root(&mut self, ast: ast::Root) -> Root {
-        let expr = self.lower_expr(ast.expr());
         Root {
+            stmts: ast.stmts().map(|stmt| {
+                let temp = self.lower_stmt(stmt);
+                self.stmts.alloc(temp)
+            }).collect(),
+        }
+    }
+    pub fn lower_stmt(&mut self, ast: ast::Stmt) -> Stmt {
+        let expr = self.lower_expr(ast.expr());
+        Stmt {
             expr: self.exprs.alloc(expr),
         }
     }

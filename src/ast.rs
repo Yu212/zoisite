@@ -72,6 +72,7 @@ macro_rules! ast {
 
 asts! {
     Root;
+    Stmt;
     BinaryExpr;
     PrefixExpr;
     ParenExpr;
@@ -85,6 +86,12 @@ asts! {
 }
 
 impl Root {
+    pub fn stmts(&self) -> impl Iterator<Item = Stmt> {
+        self.0.children().filter_map(Stmt::cast)
+    }
+}
+
+impl Stmt {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
     }

@@ -3,11 +3,22 @@ use crate::hir::{BinaryOp, UnaryOp};
 use crate::parser::{CompletedMarker, Parser};
 use crate::syntax_kind::SyntaxKind;
 
+const RECOVERY_SET: [SyntaxKind; 1] = [SyntaxKind::Semicolon];
+
 pub fn root(p: &mut Parser<'_>) {
     let m = p.start();
     p.eat_trivia();
-    expr(p, 0);
+    while !p.at(SyntaxKind::Eof) {
+        stmt(p);
+    }
     m.complete(p, SyntaxKind::Root);
+}
+
+pub fn stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    let m = p.start();
+    expr(p, 0);
+    p.expect(SyntaxKind::Semicolon);
+    m.complete(p, SyntaxKind::Stmt)
 }
 
 pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker> {
@@ -42,10 +53,10 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
         kind => {
-            p.error(DiagnosticKind::UnexpectedToken {
+            p.error_and_recover(DiagnosticKind::UnexpectedToken {
                 expected: vec![SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen],
                 actual: kind,
-            });
+            }, &RECOVERY_SET);
             None
         }
     }
@@ -93,16 +104,21 @@ mod tests {
 
     #[test]
     fn expr() {
-        insta::assert_debug_snapshot!(parse("1 + 2 * 3"));
+        insta::assert_debug_snapshot!(parse("1 + 2 * 3;"));
     }
 
     #[test]
     fn unary() {
-        insta::assert_debug_snapshot!(parse("-1 * -2"));
+        insta::assert_debug_snapshot!(parse("-1 * -2;"));
     }
 
     #[test]
     fn paren() {
-        insta::assert_debug_snapshot!(parse("(1 + 2) * 3"));
+        insta::assert_debug_snapshot!(parse("(1 + 2) * 3;"));
+    }
+
+    #[test]
+    fn stmt() {
+        insta::assert_debug_snapshot!(parse("1; 2; 3;"));
     }
 }

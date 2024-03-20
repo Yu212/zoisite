@@ -1,9 +1,14 @@
 use la_arena::Idx;
 
 type ExprIdx = Idx<Expr>;
+type StmtIdx = Idx<Stmt>;
 
 #[derive(Debug)]
 pub struct Root {
+    pub stmts: Vec<StmtIdx>,
+}
+
+pub struct Stmt {
     pub expr: ExprIdx,
 }
 
