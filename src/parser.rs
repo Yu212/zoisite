@@ -8,6 +8,7 @@ use crate::grammar::root;
 use crate::language::SyntaxNode;
 use crate::syntax_kind::SyntaxKind;
 use crate::token::Token;
+use crate::token_set::TokenSet;
 
 pub struct Parser<'a> {
     tokens: Vec<Token<'a>>,
@@ -49,8 +50,8 @@ impl<'a> Parser<'a> {
     pub fn at(&self, kind: SyntaxKind) -> bool {
         self.nth_at(0, kind)
     }
-    pub fn at_set(&self, set: &[SyntaxKind]) -> bool {
-        set.contains(&self.current())
+    pub fn at_set(&self, set: &TokenSet) -> bool {
+        set.contains(self.current())
     }
     pub fn nth_at(&self, n: usize, kind: SyntaxKind) -> bool {
         self.nth(n) == kind
@@ -77,28 +78,25 @@ impl<'a> Parser<'a> {
         if self.eat(kind) {
             true
         } else {
-            self.error(DiagnosticKind::UnexpectedToken {
-                expected: vec![kind],
-                actual: self.current(),
-            });
+            self.error(&[kind]);
             false
         }
     }
-    pub fn error(&mut self, diagnostic_kind: DiagnosticKind) {
-        self.events.push(Event::Error(Diagnostic::new(diagnostic_kind, self.current_range())));
+    pub fn error(&mut self, expected: &[SyntaxKind]) {
+        self.events.push(Event::Error(Diagnostic::new(DiagnosticKind::UnexpectedToken {
+            expected: expected.to_vec(),
+            actual: self.current(),
+        }, self.current_range())));
     }
-    pub fn error_and_bump(&mut self, diagnostic_kind: DiagnosticKind) {
-        let m = self.start();
-        self.error(diagnostic_kind);
-        self.bump();
-        m.complete(self, SyntaxKind::Error);
-    }
-    pub fn error_and_recover(&mut self, diagnostic_kind: DiagnosticKind, recovery: &[SyntaxKind]) {
+    pub fn error_and_recover(&mut self, expected: &[SyntaxKind], recovery: &TokenSet) {
         if self.at_set(recovery) {
-            self.error(diagnostic_kind);
+            self.error(expected);
             return;
         }
-        self.error_and_bump(diagnostic_kind);
+        let m = self.start();
+        self.error(expected);
+        self.bump();
+        m.complete(self, SyntaxKind::Error);
     }
     pub fn eat_trivia(&mut self) {
         while self.current().is_trivia() {

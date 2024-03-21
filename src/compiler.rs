@@ -47,7 +47,14 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
     fn compile_stmt(&self, stmt: &Stmt) -> Option<IntValue<'ctx>> {
-        self.compile_expr(&self.db.exprs[stmt.expr])
+        match stmt {
+            Stmt::LetStmt { name: _, expr } => {
+                self.compile_expr(&self.db.exprs[*expr])
+            },
+            Stmt::ExprStmt { expr } => {
+                self.compile_expr(&self.db.exprs[*expr])
+            },
+        }
     }
     fn compile_expr(&self, expr: &Expr) -> Option<IntValue<'ctx>> {
         match expr {

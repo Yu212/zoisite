@@ -1,0 +1,19 @@
+---
+source: src/lexer.rs
+expression: "tokenize(\"let\")"
+---
+(
+    [
+        Token {
+            kind: LetKw,
+            text: "let",
+            range: 0..3,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 3..3,
+        },
+    ],
+    [],
+)

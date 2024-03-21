@@ -1,3 +1,4 @@
+use ecow::EcoString;
 use la_arena::Idx;
 
 type ExprIdx = Idx<Expr>;
@@ -8,8 +9,14 @@ pub struct Root {
     pub stmts: Vec<StmtIdx>,
 }
 
-pub struct Stmt {
-    pub expr: ExprIdx,
+pub enum Stmt {
+    LetStmt {
+        name: Option<EcoString>,
+        expr: ExprIdx,
+    },
+    ExprStmt {
+        expr: ExprIdx,
+    },
 }
 
 #[derive(Debug)]
@@ -26,7 +33,7 @@ pub enum Expr {
     },
     Literal {
         n: Option<u64>,
-    }
+    },
 }
 
 #[derive(Debug)]

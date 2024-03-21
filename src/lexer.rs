@@ -24,7 +24,7 @@ impl<'a> Lexer<'a> {
         let mut diagnostics = Vec::new();
         loop {
             let start = self.s.cursor();
-            let kind = self.identify_token();
+            let kind = self.identify_token(start);
             let end = self.s.cursor();
             let range = TextRange::new(TextSize::new(start as u32), TextSize::new(end as u32));
             let text = self.s.get(range.into());
@@ -47,11 +47,13 @@ impl<'a> Lexer<'a> {
         SyntaxKind::Error
     }
 
-    fn identify_token(&mut self) -> SyntaxKind {
+    fn identify_token(&mut self, start: usize) -> SyntaxKind {
         match self.s.eat() {
             Some(c) if c.is_ascii_whitespace() => self.whitespace(),
             Some(c) if c.is_ascii_digit() => self.number(),
+            Some(c) if Self::is_ident_start(c) => self.ident(start),
             Some(';') => SyntaxKind::Semicolon,
+            Some('=') => SyntaxKind::Equals,
             Some('+') => SyntaxKind::Plus,
             Some('-') => SyntaxKind::Minus,
             Some('*') => SyntaxKind::Star,
@@ -64,9 +66,26 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn is_ident_start(c: char) -> bool {
+        c.is_ascii_alphabetic() || c == '_'
+    }
+
+    fn is_ident_continue(c: char) -> bool {
+        c.is_ascii_alphanumeric() || c == '_'
+    }
+
     fn whitespace(&mut self) -> SyntaxKind {
         self.s.eat_while(char::is_ascii_whitespace);
         SyntaxKind::Whitespace
+    }
+
+    fn ident(&mut self, start: usize) -> SyntaxKind {
+        self.s.eat_while(Self::is_ident_continue);
+        let ident = self.s.from(start);
+        match ident {
+            "let" => SyntaxKind::LetKw,
+            _ => SyntaxKind::Ident,
+        }
     }
 
     fn number(&mut self) -> SyntaxKind {
@@ -88,7 +107,7 @@ mod tests {
 
     #[test]
     fn number() {
-        insta::assert_debug_snapshot!(tokenize("123 456"));
+        insta::assert_debug_snapshot!(tokenize("1 23"));
     }
 
     #[test]
@@ -99,5 +118,15 @@ mod tests {
     #[test]
     fn paren() {
         insta::assert_debug_snapshot!(tokenize("( )"));
+    }
+
+    #[test]
+    fn ketword() {
+        insta::assert_debug_snapshot!(tokenize("let"));
+    }
+
+    #[test]
+    fn ident() {
+        insta::assert_debug_snapshot!(tokenize("a bc"));
     }
 }

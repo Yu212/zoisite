@@ -1,9 +1,9 @@
-use crate::diagnostic::DiagnosticKind;
 use crate::hir::{BinaryOp, UnaryOp};
 use crate::parser::{CompletedMarker, Parser};
 use crate::syntax_kind::SyntaxKind;
+use crate::token_set::TokenSet;
 
-const RECOVERY_SET: [SyntaxKind; 1] = [SyntaxKind::Semicolon];
+const RECOVERY_SET: TokenSet = TokenSet::new(&[SyntaxKind::Semicolon]);
 
 pub fn root(p: &mut Parser<'_>) {
     let m = p.start();
@@ -15,10 +15,28 @@ pub fn root(p: &mut Parser<'_>) {
 }
 
 pub fn stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    match p.current() {
+        SyntaxKind::LetKw => let_stmt(p),
+        _ => expr_stmt(p),
+    }
+}
+
+pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::LetKw));
+    let m = p.start();
+    p.bump();
+    p.expect(SyntaxKind::Ident);
+    p.expect(SyntaxKind::Equals);
+    expr(p, 0);
+    p.expect(SyntaxKind::Semicolon);
+    m.complete(p, SyntaxKind::LetStmt)
+}
+
+pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
-    m.complete(p, SyntaxKind::Stmt)
+    m.complete(p, SyntaxKind::ExprStmt)
 }
 
 pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker> {
@@ -52,11 +70,8 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::Number => Some(number(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
-        kind => {
-            p.error_and_recover(DiagnosticKind::UnexpectedToken {
-                expected: vec![SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen],
-                actual: kind,
-            }, &RECOVERY_SET);
+        _ => {
+            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen], &RECOVERY_SET);
             None
         }
     }
@@ -103,7 +118,17 @@ mod tests {
     }
 
     #[test]
-    fn expr() {
+    fn multi_stmt() {
+        insta::assert_debug_snapshot!(parse("1; 2; 3;"));
+    }
+
+    #[test]
+    fn let_stmt() {
+        insta::assert_debug_snapshot!(parse("let a = 1;"));
+    }
+
+    #[test]
+    fn expr_stmt() {
         insta::assert_debug_snapshot!(parse("1 + 2 * 3;"));
     }
 
@@ -115,10 +140,5 @@ mod tests {
     #[test]
     fn paren() {
         insta::assert_debug_snapshot!(parse("(1 + 2) * 3;"));
-    }
-
-    #[test]
-    fn stmt() {
-        insta::assert_debug_snapshot!(parse("1; 2; 3;"));
     }
 }

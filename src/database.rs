@@ -20,8 +20,21 @@ impl Database {
         }
     }
     pub fn lower_stmt(&mut self, ast: ast::Stmt) -> Stmt {
+        match ast {
+            ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
+            ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
+        }
+    }
+    pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
-        Stmt {
+        Stmt::LetStmt {
+            name: ast.name().and_then(|ident| ident.value()),
+            expr: self.exprs.alloc(expr),
+        }
+    }
+    pub fn lower_expr_stmt(&mut self, ast: ast::ExprStmt) -> Stmt {
+        let expr = self.lower_expr(ast.expr());
+        Stmt::ExprStmt {
             expr: self.exprs.alloc(expr),
         }
     }

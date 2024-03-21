@@ -5,6 +5,9 @@ pub enum SyntaxKind {
     Whitespace,
     Eof,
     Semicolon,
+    Ident,
+    LetKw,
+    Equals,
     Plus,
     Minus,
     Star,
@@ -19,6 +22,8 @@ pub enum SyntaxKind {
     ParenExpr,
     PrefixExpr,
     Stmt,
+    LetStmt,
+    ExprStmt,
 }
 
 impl SyntaxKind {

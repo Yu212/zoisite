@@ -1,3 +1,4 @@
+use ecow::EcoString;
 use rowan::ast::AstNode;
 use rowan::SyntaxElement;
 
@@ -72,17 +73,23 @@ macro_rules! ast {
 
 asts! {
     Root;
-    Stmt;
-    BinaryExpr;
-    PrefixExpr;
-    ParenExpr;
-    Literal;
+    Stmt [
+        LetStmt,
+        ExprStmt,
+    ];
+    LetStmt;
+    ExprStmt;
     Expr [
         BinaryExpr,
         PrefixExpr,
         ParenExpr,
         Literal,
     ];
+    BinaryExpr;
+    PrefixExpr;
+    ParenExpr;
+    Ident;
+    Literal;
 }
 
 impl Root {
@@ -91,9 +98,25 @@ impl Root {
     }
 }
 
-impl Stmt {
+impl LetStmt {
+    pub fn name(&self) -> Option<Ident> {
+        self.0.children().find_map(Ident::cast)
+    }
+
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl ExprStmt {
+    pub fn expr(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl Ident {
+    pub fn value(&self) -> Option<EcoString> {
+        Some(self.0.first_token()?.text().into())
     }
 }
 

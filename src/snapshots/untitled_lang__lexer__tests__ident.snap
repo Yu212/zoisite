@@ -1,12 +1,12 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"1 23\")"
+expression: "tokenize(\"a bc\")"
 ---
 (
     [
         Token {
-            kind: Number,
-            text: "1",
+            kind: Ident,
+            text: "a",
             range: 0..1,
         },
         Token {
@@ -15,8 +15,8 @@ expression: "tokenize(\"1 23\")"
             range: 1..2,
         },
         Token {
-            kind: Number,
-            text: "23",
+            kind: Ident,
+            text: "bc",
             range: 2..4,
         },
         Token {

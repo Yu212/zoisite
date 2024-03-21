@@ -4,7 +4,7 @@ expression: "parse(\"-1 * -2;\")"
 ---
 (
     Root@0..8
-      Stmt@0..8
+      ExprStmt@0..8
         BinaryExpr@0..7
           PrefixExpr@0..3
             Minus@0..1 "-"

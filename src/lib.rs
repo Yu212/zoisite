@@ -21,6 +21,7 @@ pub mod hir;
 pub mod compiler;
 pub mod validation;
 pub mod database;
+pub mod token_set;
 
 pub fn parse_no_output(text: &str) {
     let lexer = Lexer::new(text);
