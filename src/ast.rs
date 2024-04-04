@@ -1,4 +1,3 @@
-use ecow::EcoString;
 use rowan::ast::AstNode;
 use rowan::SyntaxElement;
 
@@ -83,12 +82,13 @@ asts! {
         BinaryExpr,
         PrefixExpr,
         ParenExpr,
+        RefExpr,
         Literal,
     ];
     BinaryExpr;
     PrefixExpr;
     ParenExpr;
-    Ident;
+    RefExpr;
     Literal;
 }
 
@@ -99,8 +99,10 @@ impl Root {
 }
 
 impl LetStmt {
-    pub fn name(&self) -> Option<Ident> {
-        self.0.children().find_map(Ident::cast)
+    pub fn name(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Ident)
     }
 
     pub fn expr(&self) -> Option<Expr> {
@@ -111,12 +113,6 @@ impl LetStmt {
 impl ExprStmt {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
-    }
-}
-
-impl Ident {
-    pub fn value(&self) -> Option<EcoString> {
-        Some(self.0.first_token()?.text().into())
     }
 }
 
@@ -151,6 +147,14 @@ impl PrefixExpr {
 impl ParenExpr {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl RefExpr {
+    pub fn ident(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Ident)
     }
 }
 

@@ -1,6 +1,8 @@
 use ecow::EcoString;
 use la_arena::Idx;
 
+use crate::scope::VarId;
+
 type ExprIdx = Idx<Expr>;
 type StmtIdx = Idx<Stmt>;
 
@@ -9,9 +11,10 @@ pub struct Root {
     pub stmts: Vec<StmtIdx>,
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum Stmt {
     LetStmt {
-        name: Option<EcoString>,
+        var_id: Option<VarId>,
         expr: ExprIdx,
     },
     ExprStmt {
@@ -19,7 +22,7 @@ pub enum Stmt {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Expr {
     Missing,
     Binary {
@@ -31,12 +34,20 @@ pub enum Expr {
         op: UnaryOp,
         expr: ExprIdx,
     },
+    Ref {
+        var_id: Option<VarId>,
+    },
     Literal {
         n: Option<u64>,
     },
 }
 
 #[derive(Debug)]
+pub struct Identifier {
+    pub name: EcoString,
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -57,7 +68,7 @@ impl BinaryOp {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum UnaryOp {
     Neg,
 }

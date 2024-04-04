@@ -1,16 +1,26 @@
+use ecow::EcoString;
 use la_arena::Arena;
 
 use crate::ast;
-use crate::hir::{BinaryOp, Expr, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Identifier, Root, Stmt, UnaryOp};
+use crate::language::SyntaxToken;
+use crate::resolve_context::ResolveContext;
 use crate::syntax_kind::SyntaxKind;
 
-#[derive(Default)]
 pub struct Database {
     pub exprs: Arena<Expr>,
     pub stmts: Arena<Stmt>,
+    pub resolve_ctx: ResolveContext,
 }
 
 impl Database {
+    pub fn new() -> Self {
+        Database {
+            exprs: Arena::default(),
+            stmts: Arena::default(),
+            resolve_ctx: ResolveContext::new(),
+        }
+    }
     pub fn lower_root(&mut self, ast: ast::Root) -> Root {
         Root {
             stmts: ast.stmts().map(|stmt| {
@@ -27,8 +37,9 @@ impl Database {
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
+        let var_id = self.lower_ident(ast.name()).map(|ident| self.resolve_ctx.define(&ident));
         Stmt::LetStmt {
-            name: ast.name().and_then(|ident| ident.value()),
+            var_id,
             expr: self.exprs.alloc(expr),
         }
     }
@@ -43,6 +54,7 @@ impl Database {
             Some(ast::Expr::BinaryExpr(ast)) => self.lower_binary_expr(ast),
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
             Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
+            Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
             Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
             None => Expr::Missing,
         }
@@ -71,9 +83,20 @@ impl Database {
             expr: self.exprs.alloc(expr),
         }
     }
+    pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
+        let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve(&ident));
+        Expr::Ref {
+            var_id,
+        }
+    }
     pub fn lower_literal(&mut self, ast: ast::Literal) -> Expr {
         Expr::Literal {
             n: ast.parse(),
         }
+    }
+    pub fn lower_ident(&mut self, ast: Option<SyntaxToken>) -> Option<Identifier> {
+        Some(Identifier {
+            name: EcoString::from(ast?.text()),
+        })
     }
 }

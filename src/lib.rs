@@ -22,6 +22,8 @@ pub mod compiler;
 pub mod validation;
 pub mod database;
 pub mod token_set;
+pub mod resolve_context;
+pub mod scope;
 
 pub fn parse_no_output(text: &str) {
     let lexer = Lexer::new(text);
@@ -33,7 +35,7 @@ pub fn parse_no_output(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
         return;
     }
-    let mut db = Database::default();
+    let mut db = Database::new();
     let hir = db.lower_root(root);
     let context = Context::create();
     let compiler = Compiler::new(&context, db, "main");
@@ -69,7 +71,7 @@ pub fn parse(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
         return;
     }
-    let mut db = Database::default();
+    let mut db = Database::new();
     let hir = db.lower_root(root);
     println!("hir: ");
     println!("{:?}", hir);
