@@ -1,3 +1,5 @@
+use std::mem;
+
 use inkwell::context::Context;
 use inkwell::OptimizationLevel;
 use rowan::ast::AstNode;
@@ -19,7 +21,6 @@ pub mod token;
 pub mod syntax_kind;
 pub mod hir;
 pub mod compiler;
-pub mod validation;
 pub mod database;
 pub mod token_set;
 pub mod resolve_context;
@@ -31,12 +32,12 @@ pub fn parse_no_output(text: &str) {
     let parser = Parser::new(tokens);
     let (syntax, parser_errors) = parser.parse();
     let root = Root::cast(syntax).unwrap();
-    let validation_errors = validation::validate(&root);
-    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
-        return;
-    }
     let mut db = Database::new();
     let hir = db.lower_root(root);
+    let lower_errors = mem::take(&mut db.diagnostics);
+    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
+        return;
+    }
     let context = Context::create();
     let compiler = Compiler::new(&context, db, "main");
     let module = compiler.compile(&hir);
@@ -67,14 +68,20 @@ pub fn parse(text: &str) {
     println!("tree: ");
     println!("{:#?}", syntax);
     let root = Root::cast(syntax).unwrap();
-    let validation_errors = validation::validate(&root);
-    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !validation_errors.is_empty() {
-        return;
-    }
     let mut db = Database::new();
     let hir = db.lower_root(root);
+    let lower_errors = mem::take(&mut db.diagnostics);
+    println!();
+    println!("lower errors: ");
+    for err in &lower_errors {
+        println!("{:?}", err);
+    }
+    println!();
     println!("hir: ");
     println!("{:?}", hir);
+    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
+        return;
+    }
     let context = Context::create();
     let compiler = Compiler::new(&context, db, "main");
     let module = compiler.compile(&hir);

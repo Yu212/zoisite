@@ -24,4 +24,5 @@ pub enum DiagnosticKind {
         expected: Vec<SyntaxKind>,
         actual: SyntaxKind,
     },
+    UndeclaredVariable,
 }

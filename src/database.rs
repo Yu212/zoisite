@@ -1,7 +1,9 @@
 use ecow::EcoString;
 use la_arena::Arena;
+use rowan::ast::AstNode;
 
 use crate::ast;
+use crate::diagnostic::{Diagnostic, DiagnosticKind};
 use crate::hir::{BinaryOp, Expr, Identifier, Root, Stmt, UnaryOp};
 use crate::language::SyntaxToken;
 use crate::resolve_context::ResolveContext;
@@ -11,6 +13,7 @@ pub struct Database {
     pub exprs: Arena<Expr>,
     pub stmts: Arena<Stmt>,
     pub resolve_ctx: ResolveContext,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl Database {
@@ -19,6 +22,7 @@ impl Database {
             exprs: Arena::default(),
             stmts: Arena::default(),
             resolve_ctx: ResolveContext::new(),
+            diagnostics: Vec::new(),
         }
     }
     pub fn lower_root(&mut self, ast: ast::Root) -> Root {
@@ -85,13 +89,22 @@ impl Database {
     }
     pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
         let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve(&ident));
+        if var_id.is_none() {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
+        }
         Expr::Ref {
             var_id,
         }
     }
     pub fn lower_literal(&mut self, ast: ast::Literal) -> Expr {
+        let parsed = ast.parse();
+        if parsed.is_none() {
+            let range = ast.syntax().first_token().unwrap().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, range));
+        }
         Expr::Literal {
-            n: ast.parse(),
+            n: parsed,
         }
     }
     pub fn lower_ident(&mut self, ast: Option<SyntaxToken>) -> Option<Identifier> {
