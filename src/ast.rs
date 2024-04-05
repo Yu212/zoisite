@@ -83,12 +83,14 @@ asts! {
         PrefixExpr,
         ParenExpr,
         RefExpr,
+        BlockExpr,
         Literal,
     ];
     BinaryExpr;
     PrefixExpr;
     ParenExpr;
     RefExpr;
+    BlockExpr;
     Literal;
 }
 
@@ -155,6 +157,12 @@ impl RefExpr {
         self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
             .find(|token| token.kind() == SyntaxKind::Ident)
+    }
+}
+
+impl BlockExpr {
+    pub fn stmts(&self) -> impl Iterator<Item = Stmt> {
+        self.0.children().filter_map(Stmt::cast)
     }
 }
 

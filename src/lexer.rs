@@ -61,6 +61,8 @@ impl<'a> Lexer<'a> {
             Some('%') => SyntaxKind::Percent,
             Some('(') => SyntaxKind::OpenParen,
             Some(')') => SyntaxKind::CloseParen,
+            Some('{') => SyntaxKind::OpenBrace,
+            Some('}') => SyntaxKind::CloseBrace,
             None => SyntaxKind::Eof,
             _ => self.error(DiagnosticKind::UnexpectedCharacter),
         }
@@ -117,7 +119,7 @@ mod tests {
 
     #[test]
     fn paren() {
-        insta::assert_debug_snapshot!(tokenize("( )"));
+        insta::assert_debug_snapshot!(tokenize("( ) { }"));
     }
 
     #[test]

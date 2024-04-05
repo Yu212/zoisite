@@ -11,7 +11,7 @@ pub struct Root {
     pub stmts: Vec<StmtIdx>,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
     LetStmt {
         var_id: Option<VarId>,
@@ -22,7 +22,7 @@ pub enum Stmt {
     },
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Missing,
     Binary {
@@ -37,6 +37,9 @@ pub enum Expr {
     Ref {
         var_id: Option<VarId>,
     },
+    Block {
+        stmts: Vec<StmtIdx>,
+    },
     Literal {
         n: Option<u64>,
     },
@@ -47,7 +50,7 @@ pub struct Identifier {
     pub name: EcoString,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -68,7 +71,7 @@ impl BinaryOp {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum UnaryOp {
     Neg,
 }

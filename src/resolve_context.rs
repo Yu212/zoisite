@@ -28,10 +28,10 @@ impl ResolveContext {
         self.scope_stack.iter().rev().find_map(|scope| scope.resolve(ident))
     }
     pub fn push_scope(&mut self) {
-        todo!()
+        self.scope_stack.push(Scope::new());
     }
     pub fn pop_scope(&mut self) {
-        todo!()
+        self.scope_stack.pop();
     }
     pub fn get_var(&self, var_id: VarId) -> &VariableInfo {
         &self.variables[var_id.0]

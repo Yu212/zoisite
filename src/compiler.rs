@@ -47,7 +47,7 @@ impl<'ctx> Compiler<'ctx> {
         let printf_function = self.module.add_function("printf", printf_type, None);
         let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
         for &stmt in &root.stmts {
-            if let Some(result) = self.compile_stmt(self.db.stmts[stmt]) {
+            if let Some(result) = self.compile_stmt(self.db.stmts[stmt].clone()) {
                 let _ = self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), result.into()], "printf_ret");
             }
         }
@@ -58,23 +58,23 @@ impl<'ctx> Compiler<'ctx> {
                 let var_id = var_id?;
                 let i64_type = self.context.i64_type();
                 let var = self.db.resolve_ctx.get_var(var_id);
-                let val = self.compile_expr(self.db.exprs[expr])?;
                 let addr = self.builder.build_alloca(i64_type, var.name.as_str()).ok()?;
+                let val = self.compile_expr(self.db.exprs[expr].clone())?;
                 self.builder.build_store(addr, val).ok()?;
                 self.addresses.insert(var_id, addr);
                 Some(i64_type.const_int(0, false))
             },
             Stmt::ExprStmt { expr } => {
-                self.compile_expr(self.db.exprs[expr])
+                self.compile_expr(self.db.exprs[expr].clone())
             },
         }
     }
-    fn compile_expr(&self, expr: Expr) -> Option<IntValue<'ctx>> {
+    fn compile_expr(&mut self, expr: Expr) -> Option<IntValue<'ctx>> {
         match expr {
             Expr::Missing => None,
             Expr::Binary { op, lhs, rhs } => {
-                let lhs_value = self.compile_expr(self.db.exprs[lhs])?;
-                let rhs_value = self.compile_expr(self.db.exprs[rhs])?;
+                let lhs_value = self.compile_expr(self.db.exprs[lhs].clone())?;
+                let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
                 match op {
                     BinaryOp::Add => self.builder.build_int_add(lhs_value, rhs_value, "add").ok(),
                     BinaryOp::Sub => self.builder.build_int_sub(lhs_value, rhs_value, "sub").ok(),
@@ -84,7 +84,7 @@ impl<'ctx> Compiler<'ctx> {
                 }
             },
             Expr::Unary { op, expr } => {
-                let expr_value = self.compile_expr(self.db.exprs[expr])?;
+                let expr_value = self.compile_expr(self.db.exprs[expr].clone())?;
                 match op {
                     UnaryOp::Neg => self.builder.build_int_neg(expr_value, "neg").ok(),
                 }
@@ -95,6 +95,9 @@ impl<'ctx> Compiler<'ctx> {
                 let ptr = self.addresses[&var_id];
                 let val = self.builder.build_load(i64_type, ptr, "tmp").ok()?;
                 Some(val.into_int_value())
+            },
+            Expr::Block { stmts } => {
+                stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().flatten()
             },
             Expr::Literal { n } => {
                 let i64_type = self.context.i64_type();

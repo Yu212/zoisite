@@ -59,6 +59,7 @@ impl Database {
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
             Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
             Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
+            Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
             None => Expr::Missing,
         }
@@ -95,6 +96,17 @@ impl Database {
         }
         Expr::Ref {
             var_id,
+        }
+    }
+    pub fn lower_block_expr(&mut self, ast: ast::BlockExpr) -> Expr {
+        self.resolve_ctx.push_scope();
+        let stmts = ast.stmts().map(|stmt| {
+            let temp = self.lower_stmt(stmt);
+            self.stmts.alloc(temp)
+        }).collect();
+        self.resolve_ctx.pop_scope();
+        Expr::Block {
+            stmts,
         }
     }
     pub fn lower_literal(&mut self, ast: ast::Literal) -> Expr {

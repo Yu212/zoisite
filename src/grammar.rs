@@ -70,9 +70,10 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::Number => Some(number(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
+        SyntaxKind::OpenBrace => Some(block_expr(p)),
         SyntaxKind::Ident => Some(ref_expr(p)),
         _ => {
-            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::Ident], &RECOVERY_SET);
+            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident], &RECOVERY_SET);
             None
         }
     }
@@ -102,6 +103,17 @@ pub fn ref_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::RefExpr)
+}
+
+pub fn block_expr(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::OpenBrace));
+    let m = p.start();
+    p.bump();
+    while !p.at(SyntaxKind::CloseBrace) && !p.at(SyntaxKind::Eof) {
+        stmt(p);
+    }
+    p.expect(SyntaxKind::CloseBrace);
+    m.complete(p, SyntaxKind::BlockExpr)
 }
 
 pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
@@ -153,5 +165,10 @@ mod tests {
     #[test]
     fn ref_expr() {
         insta::assert_debug_snapshot!(parse("a + bc;"));
+    }
+
+    #[test]
+    fn block_expr() {
+        insta::assert_debug_snapshot!(parse("{1;} + {2;};"));
     }
 }
