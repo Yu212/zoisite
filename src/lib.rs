@@ -96,9 +96,9 @@ pub fn parse(text: &str) {
     unsafe {
         engine.get_function::<unsafe extern "C" fn() -> i32>("main").unwrap().call();
     }
-    module.print_to_file(PathBuf::from("./target/output.ll")).expect("print_to_file failed");
+    module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
     optimize(&module);
-    module.print_to_file(PathBuf::from("./target/output_optimized.ll")).expect("print_to_file failed");
+    module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
 }
 
 pub fn optimize(module: &Module) {
