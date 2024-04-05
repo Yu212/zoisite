@@ -46,10 +46,8 @@ impl<'ctx> Compiler<'ctx> {
         let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
         let printf_function = self.module.add_function("printf", printf_type, None);
         let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
-        for &stmt in &root.stmts {
-            if let Some(result) = self.compile_stmt(self.db.stmts[stmt].clone()) {
-                let _ = self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), result.into()], "printf_ret");
-            }
+        if let Some(result) = root.stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().flatten() {
+            let _ = self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), result.into()], "printf_ret");
         }
     }
     fn compile_stmt(&mut self, stmt: Stmt) -> Option<IntValue<'ctx>> {
