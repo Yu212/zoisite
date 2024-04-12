@@ -26,6 +26,7 @@ impl Database {
         }
     }
     pub fn lower_root(&mut self, ast: ast::Root) -> Root {
+        self.resolve_ctx.define_builtins();
         Root {
             stmts: ast.stmts().map(|stmt| {
                 let temp = self.lower_stmt(stmt);

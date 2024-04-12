@@ -33,6 +33,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
     pub fn compile(mut self, root: &Root) -> Module<'ctx> {
+        self.add_builtins();
         let i32_type = self.context.i32_type();
         let fn_type = i32_type.fn_type(&[], false);
         let function = self.module.add_function("main", fn_type, None);
@@ -43,14 +44,25 @@ impl<'ctx> Compiler<'ctx> {
         self.module
     }
     fn compile_root(&mut self, root: &Root) {
+        for &stmt in &root.stmts {
+            self.compile_stmt(self.db.stmts[stmt].clone());
+        }
+    }
+    pub fn add_builtins(&mut self) {
+        let i64_type = self.context.i64_type();
         let i8_ptr_type = self.context.i8_type().ptr_type(AddressSpace::default());
         let void_type = self.context.void_type();
         let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
         let printf_function = self.module.add_function("printf", printf_type, None);
+        let print_type = i64_type.fn_type(&[i64_type.into()], false);
+        let print_fn = self.module.add_function("print", print_type, None);
+        let basic_block = self.context.append_basic_block(print_fn, "entry");
+        self.builder.position_at_end(basic_block);
         let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
-        if let Some(result) = root.stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().flatten() {
-            let _ = self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), result.into()], "printf_ret");
-        }
+        let arg = print_fn.get_first_param().unwrap();
+        self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), arg.into()], "").expect("build_call failed");
+        self.builder.build_return(Some(&i64_type.const_int(0, false))).unwrap();
+        self.functions.insert(FnId(0), print_fn);
     }
     fn compile_stmt(&mut self, stmt: Stmt) -> Option<IntValue<'ctx>> {
         match stmt {
