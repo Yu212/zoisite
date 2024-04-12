@@ -1,6 +1,5 @@
 use ecow::EcoString;
 
-use crate::hir::Identifier;
 use crate::scope::{FnId, Scope, VarId};
 
 pub struct ResolveContext {
@@ -17,29 +16,34 @@ impl ResolveContext {
             functions: Vec::new(),
         }
     }
-    pub fn define_var(&mut self, ident: &Identifier) -> VarId {
+    pub fn define_var(&mut self, name: EcoString) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
         let id = VarId(self.variables.len());
         self.variables.push(VariableInfo {
-            name: ident.name.clone(),
+            name: name.clone(),
+            id,
         });
-        scope.define_var(ident, id);
+        scope.define_var(name, id);
         id
     }
-    pub fn define_fn(&mut self, name: EcoString) -> FnId {
+    pub fn define_fn(&mut self, name: EcoString, num_args: usize) -> FnId {
         let scope = self.scope_stack.last_mut().unwrap();
         let id = FnId(self.functions.len());
         self.functions.push(FunctionInfo {
             name: name.clone(),
+            id,
+            num_args,
         });
-        scope.define_fn(name, id);
+        scope.define_fn(name, num_args, id);
         id
     }
-    pub fn resolve_var(&mut self, ident: &Identifier) -> Option<VarId> {
-        self.scope_stack.iter().rev().find_map(|scope| scope.resolve_var(ident))
+    pub fn resolve_var(&mut self, name: &EcoString) -> Option<&VariableInfo> {
+        let var_id = self.scope_stack.iter().rev().find_map(|scope| scope.resolve_var(name));
+        var_id.map(|var_id| self.get_var(var_id))
     }
-    pub fn resolve_fn(&mut self, ident: &Identifier) -> Option<FnId> {
-        self.scope_stack.iter().rev().find_map(|scope| scope.resolve_fn(ident))
+    pub fn resolve_fn(&mut self, name: &EcoString, num_args: usize) -> Option<&FunctionInfo> {
+        let fn_id = self.scope_stack.iter().rev().find_map(|scope| scope.resolve_fn(name, num_args));
+        fn_id.map(|fn_id| self.get_fn(fn_id))
     }
     pub fn push_scope(&mut self) {
         self.scope_stack.push(Scope::new());
@@ -57,8 +61,11 @@ impl ResolveContext {
 
 pub struct VariableInfo {
     pub name: EcoString,
+    pub id: VarId,
 }
 
 pub struct FunctionInfo {
     pub name: EcoString,
+    pub id: FnId,
+    pub num_args: usize,
 }

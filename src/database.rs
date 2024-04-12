@@ -41,7 +41,7 @@ impl Database {
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
-        let var_id = self.lower_ident(ast.name()).map(|ident| self.resolve_ctx.define_var(&ident));
+        let var_id = self.lower_ident(ast.name()).map(|ident| self.resolve_ctx.define_var(ident.name.clone()));
         Stmt::LetStmt {
             var_id,
             expr: self.exprs.alloc(expr),
@@ -90,25 +90,27 @@ impl Database {
         }
     }
     pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
-        let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident));
-        if var_id.is_none() {
+        let var_info = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident.name));
+        if var_info.is_none() {
             let range = ast.syntax().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
         }
+        let var_id = var_info.map(|info| info.id);
         Expr::Ref {
             var_id,
         }
     }
     pub fn lower_fn_call_expr(&mut self, ast: ast::FnCallExpr) -> Expr {
-        let fn_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident));
-        if fn_id.is_none() {
-            let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
-        }
-        let args = ast.args().map(|expr| {
+        let args: Vec<_> = ast.args().map(|expr| {
             let temp = self.lower_expr(Some(expr));
             self.exprs.alloc(temp)
         }).collect();
+        let fn_info = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident.name, args.len()));
+        if fn_info.is_none() {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
+        }
+        let fn_id = fn_info.map(|info| info.id);
         Expr::FnCall {
             fn_id,
             args,
