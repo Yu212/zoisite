@@ -1,7 +1,7 @@
 use ecow::EcoString;
 use la_arena::Idx;
 
-use crate::scope::VarId;
+use crate::scope::{FnId, VarId};
 
 type ExprIdx = Idx<Expr>;
 type StmtIdx = Idx<Stmt>;
@@ -36,6 +36,10 @@ pub enum Expr {
     },
     Ref {
         var_id: Option<VarId>,
+    },
+    FnCall {
+        fn_id: Option<FnId>,
+        args: Vec<ExprIdx>,
     },
     Block {
         stmts: Vec<StmtIdx>,

@@ -25,4 +25,5 @@ pub enum DiagnosticKind {
         actual: SyntaxKind,
     },
     UndeclaredVariable,
+    UndeclaredFunction,
 }

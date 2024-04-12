@@ -52,6 +52,7 @@ impl<'a> Lexer<'a> {
             Some(c) if c.is_ascii_whitespace() => self.whitespace(),
             Some(c) if c.is_ascii_digit() => self.number(),
             Some(c) if Self::is_ident_start(c) => self.ident(start),
+            Some(',') => SyntaxKind::Comma,
             Some(';') => SyntaxKind::Semicolon,
             Some('=') => SyntaxKind::Equals,
             Some('+') => SyntaxKind::Plus,

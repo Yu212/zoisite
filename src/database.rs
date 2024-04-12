@@ -41,7 +41,7 @@ impl Database {
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
-        let var_id = self.lower_ident(ast.name()).map(|ident| self.resolve_ctx.define(&ident));
+        let var_id = self.lower_ident(ast.name()).map(|ident| self.resolve_ctx.define_var(&ident));
         Stmt::LetStmt {
             var_id,
             expr: self.exprs.alloc(expr),
@@ -59,6 +59,7 @@ impl Database {
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
             Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
             Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
+            Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
             None => Expr::Missing,
@@ -89,13 +90,28 @@ impl Database {
         }
     }
     pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
-        let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve(&ident));
+        let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident));
         if var_id.is_none() {
             let range = ast.syntax().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
         }
         Expr::Ref {
             var_id,
+        }
+    }
+    pub fn lower_fn_call_expr(&mut self, ast: ast::FnCallExpr) -> Expr {
+        let fn_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident));
+        if fn_id.is_none() {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
+        }
+        let args = ast.args().map(|expr| {
+            let temp = self.lower_expr(Some(expr));
+            self.exprs.alloc(temp)
+        }).collect();
+        Expr::FnCall {
+            fn_id,
+            args,
         }
     }
     pub fn lower_block_expr(&mut self, ast: ast::BlockExpr) -> Expr {

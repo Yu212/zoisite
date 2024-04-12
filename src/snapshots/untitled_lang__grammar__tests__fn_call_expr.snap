@@ -1,0 +1,21 @@
+---
+source: src/grammar.rs
+expression: "parse(\"f(a, 1);\")"
+---
+(
+    Root@0..8
+      ExprStmt@0..8
+        FnCallExpr@0..7
+          Ident@0..1 "f"
+          OpenParen@1..2 "("
+          RefExpr@2..3
+            Ident@2..3 "a"
+          Comma@3..4 ","
+          Whitespace@4..5 " "
+          Literal@5..6
+            Number@5..6 "1"
+          CloseParen@6..7 ")"
+        Semicolon@7..8 ";"
+    ,
+    [],
+)

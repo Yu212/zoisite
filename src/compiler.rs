@@ -4,11 +4,11 @@ use inkwell::AddressSpace;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::values::{IntValue, PointerValue};
+use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 
 use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, Root, Stmt, UnaryOp};
-use crate::scope::VarId;
+use crate::scope::{FnId, VarId};
 
 pub struct Compiler<'ctx> {
     pub db: Database,
@@ -16,6 +16,7 @@ pub struct Compiler<'ctx> {
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
     pub addresses: HashMap<VarId, PointerValue<'ctx>>,
+    pub functions: HashMap<FnId, FunctionValue<'ctx>>,
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -28,6 +29,7 @@ impl<'ctx> Compiler<'ctx> {
             module,
             builder,
             addresses: HashMap::new(),
+            functions: HashMap::new(),
         }
     }
     pub fn compile(mut self, root: &Root) -> Module<'ctx> {
@@ -93,6 +95,17 @@ impl<'ctx> Compiler<'ctx> {
                 let ptr = self.addresses[&var_id];
                 let val = self.builder.build_load(i64_type, ptr, "tmp").ok()?;
                 Some(val.into_int_value())
+            },
+            Expr::FnCall { fn_id, args } => {
+                let fn_id = fn_id?;
+                let function = self.functions[&fn_id];
+                let args: Vec<_> = args.iter()
+                    .filter_map(|&expr| self.compile_expr(self.db.exprs[expr].clone()))
+                    .map(|expr| BasicMetadataValueEnum::from(expr))
+                    .collect();
+                let call_site = self.builder.build_call(function, &*args, "tmp").ok()?;
+                let ret_val = call_site.try_as_basic_value().left()?;
+                Some(ret_val.into_int_value())
             },
             Expr::Block { stmts } => {
                 stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().flatten()

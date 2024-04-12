@@ -83,6 +83,7 @@ asts! {
         PrefixExpr,
         ParenExpr,
         RefExpr,
+        FnCallExpr,
         BlockExpr,
         Literal,
     ];
@@ -90,6 +91,7 @@ asts! {
     PrefixExpr;
     ParenExpr;
     RefExpr;
+    FnCallExpr;
     BlockExpr;
     Literal;
 }
@@ -157,6 +159,18 @@ impl RefExpr {
         self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
             .find(|token| token.kind() == SyntaxKind::Ident)
+    }
+}
+
+impl FnCallExpr {
+    pub fn ident(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Ident)
+    }
+
+    pub fn args(&self) -> impl Iterator<Item = Expr> {
+        self.0.children().filter_map(Expr::cast)
     }
 }
 
