@@ -124,7 +124,7 @@ impl<'ctx> Compiler<'ctx> {
                 let val = self.builder.build_load(i64_type, ptr, "tmp").ok()?;
                 Some(val.into_int_value())
             },
-            Expr::If { cond, then_expr } => {
+            Expr::If { cond, then_expr, else_expr } => {
                 let i64_type = self.context.i64_type();
                 let cond_val = self.compile_expr(self.db.exprs[cond].clone())?;
                 let cur_func = self.module.get_last_function()?;
@@ -138,7 +138,11 @@ impl<'ctx> Compiler<'ctx> {
                 self.builder.build_unconditional_branch(merge_block);
 
                 self.builder.position_at_end(else_block);
-                let else_val = i64_type.const_int(0, false);
+                let else_val = if let Some(else_expr) = else_expr {
+                    self.compile_expr(self.db.exprs[else_expr].clone())?
+                } else {
+                    i64_type.const_int(0, false)
+                };
                 self.builder.build_unconditional_branch(merge_block);
 
                 self.builder.position_at_end(merge_block);

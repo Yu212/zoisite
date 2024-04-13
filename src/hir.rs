@@ -40,6 +40,7 @@ pub enum Expr {
     If {
         cond: ExprIdx,
         then_expr: ExprIdx,
+        else_expr: Option<ExprIdx>,
     },
     FnCall {
         fn_id: Option<FnId>,

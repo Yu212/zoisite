@@ -88,6 +88,7 @@ impl<'a> Lexer<'a> {
         match ident {
             "let" => SyntaxKind::LetKw,
             "if" => SyntaxKind::IfKw,
+            "else" => SyntaxKind::ElseKw,
             _ => SyntaxKind::Ident,
         }
     }

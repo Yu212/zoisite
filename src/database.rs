@@ -105,9 +105,11 @@ impl Database {
     pub fn lower_if_expr(&mut self, ast: ast::IfExpr) -> Expr {
         let cond = self.lower_expr(ast.cond());
         let then_expr = self.lower_expr(ast.then_expr());
+        let else_expr = ast.else_expr().map(|expr| self.lower_expr(Some(expr)));
         Expr::If {
             cond: self.exprs.alloc(cond),
             then_expr: self.exprs.alloc(then_expr),
+            else_expr: else_expr.map(|expr| self.exprs.alloc(expr)),
         }
     }
     pub fn lower_fn_call_expr(&mut self, ast: ast::FnCallExpr) -> Expr {

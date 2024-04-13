@@ -112,7 +112,10 @@ pub fn if_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     expr(p, 0);
-    block_expr(p);
+    expr(p, 0);
+    if p.eat(SyntaxKind::ElseKw) {
+        expr(p, 0);
+    }
     m.complete(p, SyntaxKind::IfExpr)
 }
 

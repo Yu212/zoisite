@@ -172,6 +172,10 @@ impl IfExpr {
     pub fn then_expr(&self) -> Option<Expr> {
         self.0.children().filter_map(Expr::cast).nth(1)
     }
+
+    pub fn else_expr(&self) -> Option<Expr> {
+        self.0.children().filter_map(Expr::cast).nth(2)
+    }
 }
 
 impl FnCallExpr {

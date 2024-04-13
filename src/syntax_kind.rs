@@ -9,6 +9,7 @@ pub enum SyntaxKind {
     Ident,
     LetKw,
     IfKw,
+    ElseKw,
     Equals,
     Plus,
     Minus,
