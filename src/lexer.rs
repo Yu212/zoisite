@@ -87,6 +87,7 @@ impl<'a> Lexer<'a> {
         let ident = self.s.from(start);
         match ident {
             "let" => SyntaxKind::LetKw,
+            "if" => SyntaxKind::IfKw,
             _ => SyntaxKind::Ident,
         }
     }

@@ -60,6 +60,7 @@ impl Database {
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
             Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
             Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
+            Some(ast::Expr::IfExpr(ast)) => self.lower_if_expr(ast),
             Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
@@ -99,6 +100,14 @@ impl Database {
         let var_id = var_info.map(|info| info.id);
         Expr::Ref {
             var_id,
+        }
+    }
+    pub fn lower_if_expr(&mut self, ast: ast::IfExpr) -> Expr {
+        let cond = self.lower_expr(ast.cond());
+        let then_expr = self.lower_expr(ast.then_expr());
+        Expr::If {
+            cond: self.exprs.alloc(cond),
+            then_expr: self.exprs.alloc(then_expr),
         }
     }
     pub fn lower_fn_call_expr(&mut self, ast: ast::FnCallExpr) -> Expr {

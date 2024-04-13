@@ -37,6 +37,10 @@ pub enum Expr {
     Ref {
         var_id: Option<VarId>,
     },
+    If {
+        cond: ExprIdx,
+        then_expr: ExprIdx,
+    },
     FnCall {
         fn_id: Option<FnId>,
         args: Vec<ExprIdx>,

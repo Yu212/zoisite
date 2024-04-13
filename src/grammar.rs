@@ -73,6 +73,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::OpenBrace => Some(block_expr(p)),
         SyntaxKind::Ident if p.nth_at(1, SyntaxKind::OpenParen) => Some(fn_call_expr(p)),
         SyntaxKind::Ident => Some(ref_expr(p)),
+        SyntaxKind::IfKw => Some(if_expr(p)),
         _ => {
             p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident], &RECOVERY_SET);
             None
@@ -104,6 +105,15 @@ pub fn ref_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::RefExpr)
+}
+
+pub fn if_expr(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::IfKw));
+    let m = p.start();
+    p.bump();
+    expr(p, 0);
+    block_expr(p);
+    m.complete(p, SyntaxKind::IfExpr)
 }
 
 pub fn fn_call_expr(p: &mut Parser<'_>) -> CompletedMarker {

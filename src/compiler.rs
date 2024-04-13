@@ -124,6 +124,28 @@ impl<'ctx> Compiler<'ctx> {
                 let val = self.builder.build_load(i64_type, ptr, "tmp").ok()?;
                 Some(val.into_int_value())
             },
+            Expr::If { cond, then_expr } => {
+                let i64_type = self.context.i64_type();
+                let cond_val = self.compile_expr(self.db.exprs[cond].clone())?;
+                let cur_func = self.module.get_last_function()?;
+                let then_block = self.context.append_basic_block(cur_func, "then");
+                let else_block = self.context.append_basic_block(cur_func, "else");
+                let merge_block = self.context.append_basic_block(cur_func, "merge");
+                self.builder.build_conditional_branch(cond_val, then_block, else_block);
+
+                self.builder.position_at_end(then_block);
+                let then_val = self.compile_expr(self.db.exprs[then_expr].clone())?;
+                self.builder.build_unconditional_branch(merge_block);
+
+                self.builder.position_at_end(else_block);
+                let else_val = i64_type.const_int(0, false);
+                self.builder.build_unconditional_branch(merge_block);
+
+                self.builder.position_at_end(merge_block);
+                let phi_node = self.builder.build_phi(i64_type, "merge").ok()?;
+                phi_node.add_incoming(&[(&then_val, then_block), (&else_val, else_block)]);
+                Some(phi_node.as_basic_value().into_int_value())
+            },
             Expr::FnCall { fn_id, args } => {
                 let fn_id = fn_id?;
                 let function = self.functions[&fn_id];
