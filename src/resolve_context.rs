@@ -18,6 +18,7 @@ impl ResolveContext {
     }
     pub fn define_builtins(&mut self) {
         self.define_fn(EcoString::from("print"), 1);
+        self.define_fn(EcoString::from("input"), 0);
     }
     pub fn define_var(&mut self, name: EcoString) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();

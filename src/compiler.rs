@@ -52,17 +52,33 @@ impl<'ctx> Compiler<'ctx> {
         let i64_type = self.context.i64_type();
         let i8_ptr_type = self.context.i8_type().ptr_type(AddressSpace::default());
         let void_type = self.context.void_type();
-        let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
-        let printf_function = self.module.add_function("printf", printf_type, None);
-        let print_type = i64_type.fn_type(&[i64_type.into()], false);
-        let print_fn = self.module.add_function("print", print_type, None);
-        let basic_block = self.context.append_basic_block(print_fn, "entry");
-        self.builder.position_at_end(basic_block);
-        let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
-        let arg = print_fn.get_first_param().unwrap();
-        self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), arg.into()], "").expect("build_call failed");
-        self.builder.build_return(Some(&i64_type.const_int(0, false))).unwrap();
-        self.functions.insert(FnId(0), print_fn);
+        {
+            let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
+            let printf_function = self.module.add_function("printf", printf_type, None);
+            let print_type = i64_type.fn_type(&[i64_type.into()], false);
+            let print_fn = self.module.add_function("print", print_type, None);
+            let basic_block = self.context.append_basic_block(print_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
+            let arg = print_fn.get_first_param().unwrap();
+            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), arg.into()], "").expect("build_call failed");
+            self.builder.build_return(Some(&i64_type.const_int(0, false))).unwrap();
+            self.functions.insert(FnId(0), print_fn);
+        }
+        {
+            let scanf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
+            let scanf_function = self.module.add_function("scanf", scanf_type, None);
+            let input_type = i64_type.fn_type(&[], false);
+            let input_fn = self.module.add_function("input", input_type, None);
+            let basic_block = self.context.append_basic_block(input_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let format_str = self.builder.build_global_string_ptr("%lld\n", "scanf_str").unwrap();
+            let scanf_ptr = self.builder.build_alloca(i64_type, "scanf_ptr").unwrap();
+            self.builder.build_call(scanf_function, &[format_str.as_pointer_value().into(), scanf_ptr.into()], "").expect("build_call failed");
+            let val = self.builder.build_load(i64_type, scanf_ptr, "tmp").unwrap();
+            self.builder.build_return(Some(&val)).unwrap();
+            self.functions.insert(FnId(1), input_fn);
+        }
     }
     fn compile_stmt(&mut self, stmt: Stmt) -> Option<IntValue<'ctx>> {
         match stmt {
