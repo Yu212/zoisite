@@ -30,7 +30,7 @@ pub mod token_set;
 pub mod resolve_context;
 pub mod scope;
 
-pub fn parse_no_output(text: &str) {
+pub fn compile_no_output(text: &str) {
     let lexer = Lexer::new(text);
     let (tokens, lexer_errors) = lexer.tokenize();
     let parser = Parser::new(tokens);
@@ -51,7 +51,7 @@ pub fn parse_no_output(text: &str) {
     }
 }
 
-pub fn parse(text: &str) {
+pub fn compile(text: &str) {
     let lexer = Lexer::new(text);
     let (tokens, lexer_errors) = lexer.tokenize();
     let parser = Parser::new(tokens);

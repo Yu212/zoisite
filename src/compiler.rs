@@ -132,11 +132,11 @@ impl<'ctx> Compiler<'ctx> {
                 let else_block = self.context.append_basic_block(cur_func, "else");
                 let merge_block = self.context.append_basic_block(cur_func, "merge");
                 let bool_cond = self.builder.build_int_compare(IntPredicate::EQ, cond_val, i64_type.const_int(0, false), "cmp").ok()?;
-                self.builder.build_conditional_branch(bool_cond, then_block, else_block);
+                self.builder.build_conditional_branch(bool_cond, then_block, else_block).ok()?;
 
                 self.builder.position_at_end(then_block);
                 let then_val = self.compile_expr(self.db.exprs[then_expr].clone())?;
-                self.builder.build_unconditional_branch(merge_block);
+                self.builder.build_unconditional_branch(merge_block).ok()?;
                 let then_block = self.builder.get_insert_block()?;
 
                 self.builder.position_at_end(else_block);
@@ -145,7 +145,7 @@ impl<'ctx> Compiler<'ctx> {
                 } else {
                     i64_type.const_int(0, false)
                 };
-                self.builder.build_unconditional_branch(merge_block);
+                self.builder.build_unconditional_branch(merge_block).ok()?;
                 let else_block = self.builder.get_insert_block()?;
 
                 self.builder.position_at_end(merge_block);
