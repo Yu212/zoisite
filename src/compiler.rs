@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use inkwell::AddressSpace;
+use inkwell::{AddressSpace, IntPredicate};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
@@ -131,11 +131,13 @@ impl<'ctx> Compiler<'ctx> {
                 let then_block = self.context.append_basic_block(cur_func, "then");
                 let else_block = self.context.append_basic_block(cur_func, "else");
                 let merge_block = self.context.append_basic_block(cur_func, "merge");
-                self.builder.build_conditional_branch(cond_val, then_block, else_block);
+                let bool_cond = self.builder.build_int_compare(IntPredicate::EQ, cond_val, i64_type.const_int(0, false), "cmp").ok()?;
+                self.builder.build_conditional_branch(bool_cond, then_block, else_block);
 
                 self.builder.position_at_end(then_block);
                 let then_val = self.compile_expr(self.db.exprs[then_expr].clone())?;
                 self.builder.build_unconditional_branch(merge_block);
+                let then_block = self.builder.get_insert_block()?;
 
                 self.builder.position_at_end(else_block);
                 let else_val = if let Some(else_expr) = else_expr {
@@ -144,6 +146,7 @@ impl<'ctx> Compiler<'ctx> {
                     i64_type.const_int(0, false)
                 };
                 self.builder.build_unconditional_branch(merge_block);
+                let else_block = self.builder.get_insert_block()?;
 
                 self.builder.position_at_end(merge_block);
                 let phi_node = self.builder.build_phi(i64_type, "merge").ok()?;
