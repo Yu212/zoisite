@@ -131,7 +131,7 @@ impl<'ctx> Compiler<'ctx> {
                 let then_block = self.context.append_basic_block(cur_func, "then");
                 let else_block = self.context.append_basic_block(cur_func, "else");
                 let merge_block = self.context.append_basic_block(cur_func, "merge");
-                let bool_cond = self.builder.build_int_compare(IntPredicate::EQ, cond_val, i64_type.const_int(0, false), "cmp").ok()?;
+                let bool_cond = self.builder.build_int_compare(IntPredicate::NE, cond_val, i64_type.const_int(0, false), "cmp").ok()?;
                 self.builder.build_conditional_branch(bool_cond, then_block, else_block).ok()?;
 
                 self.builder.position_at_end(then_block);
