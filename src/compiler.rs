@@ -120,6 +120,13 @@ impl<'ctx> Compiler<'ctx> {
         match expr {
             Expr::Missing => None,
             Expr::Binary { op, lhs, rhs } => {
+                if op == BinaryOp::Assign {
+                    let Expr::Ref { var_id } = self.db.exprs[lhs].clone() else { unreachable!() };
+                    let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
+                    let ptr = self.addresses[&var_id?];
+                    self.builder.build_store(ptr, rhs_value).ok()?;
+                    return Some(rhs_value);
+                }
                 let lhs_value = self.compile_expr(self.db.exprs[lhs].clone())?;
                 let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
                 match op {
@@ -128,6 +135,7 @@ impl<'ctx> Compiler<'ctx> {
                     BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "mul").ok(),
                     BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
                     BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
+                    BinaryOp::Assign => unreachable!(),
                 }
             },
             Expr::Unary { op, expr } => {

@@ -26,4 +26,5 @@ pub enum DiagnosticKind {
     },
     UndeclaredVariable,
     UndeclaredFunction,
+    InvalidLhs,
 }

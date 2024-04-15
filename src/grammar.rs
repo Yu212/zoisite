@@ -58,6 +58,7 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
             SyntaxKind::Star => BinaryOp::Mul,
             SyntaxKind::Slash => BinaryOp::Div,
             SyntaxKind::Percent => BinaryOp::Rem,
+            SyntaxKind::Equals => BinaryOp::Assign,
             _ => break,
         };
         let (left_binding_power, right_binding_power) = op.binding_power();

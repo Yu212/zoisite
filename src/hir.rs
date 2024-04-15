@@ -63,23 +63,25 @@ pub struct Identifier {
     pub name: EcoString,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BinaryOp {
     Add,
     Sub,
     Mul,
     Div,
     Rem,
+    Assign,
 }
 
 impl BinaryOp {
     pub fn binding_power(&self) -> (u8, u8) {
         match self {
-            BinaryOp::Add => (1, 2),
-            BinaryOp::Sub => (1, 2),
-            BinaryOp::Mul => (3, 4),
-            BinaryOp::Div => (3, 4),
-            BinaryOp::Rem => (3, 4),
+            BinaryOp::Add => (3, 4),
+            BinaryOp::Sub => (3, 4),
+            BinaryOp::Mul => (5, 6),
+            BinaryOp::Div => (5, 6),
+            BinaryOp::Rem => (5, 6),
+            BinaryOp::Assign => (2, 1),
         }
     }
 }

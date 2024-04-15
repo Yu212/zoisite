@@ -83,10 +83,16 @@ impl Database {
             SyntaxKind::Star => BinaryOp::Mul,
             SyntaxKind::Slash => BinaryOp::Div,
             SyntaxKind::Percent => BinaryOp::Rem,
+            SyntaxKind::Equals => BinaryOp::Assign,
             _ => unreachable!(),
         };
         let lhs = self.lower_expr(ast.lhs());
         let rhs = self.lower_expr(ast.rhs());
+        if let Expr::Ref { var_id: _ } = lhs {
+        } else if op == BinaryOp::Assign {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidLhs, range));
+        }
         Expr::Binary {
             op,
             lhs: self.exprs.alloc(lhs),
