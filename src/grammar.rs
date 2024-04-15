@@ -17,6 +17,7 @@ pub fn root(p: &mut Parser<'_>) {
 pub fn stmt(p: &mut Parser<'_>) -> CompletedMarker {
     match p.current() {
         SyntaxKind::LetKw => let_stmt(p),
+        SyntaxKind::WhileKw => while_stmt(p),
         _ => expr_stmt(p),
     }
 }
@@ -30,6 +31,15 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::LetStmt)
+}
+
+pub fn while_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::WhileKw));
+    let m = p.start();
+    p.bump();
+    expr(p, 0);
+    block_expr(p);
+    m.complete(p, SyntaxKind::WhileStmt)
 }
 
 pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {

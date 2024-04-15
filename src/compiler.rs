@@ -92,6 +92,25 @@ impl<'ctx> Compiler<'ctx> {
                 self.addresses.insert(var_id, addr);
                 Some(i64_type.const_int(0, false))
             },
+            Stmt::WhileStmt { cond, block } => {
+                let i64_type = self.context.i64_type();
+                let cur_func = self.module.get_last_function()?;
+                let cond_block = self.context.append_basic_block(cur_func, "loopcond");
+                let loop_block = self.context.append_basic_block(cur_func, "loop");
+                let after_block = self.context.append_basic_block(cur_func, "after");
+                self.builder.build_unconditional_branch(cond_block).ok()?;
+                self.builder.position_at_end(cond_block);
+                let cond_val = self.compile_expr(self.db.exprs[cond].clone())?;
+                let bool_cond = self.builder.build_int_compare(IntPredicate::NE, cond_val, i64_type.const_int(0, false), "cmp").ok()?;
+                self.builder.build_conditional_branch(bool_cond, loop_block, after_block).ok()?;
+
+                self.builder.position_at_end(loop_block);
+                self.compile_expr(self.db.exprs[block].clone())?;
+                self.builder.build_unconditional_branch(cond_block).ok()?;
+
+                self.builder.position_at_end(after_block);
+                Some(i64_type.const_int(0, false))
+            },
             Stmt::ExprStmt { expr } => {
                 self.compile_expr(self.db.exprs[expr].clone())
             },

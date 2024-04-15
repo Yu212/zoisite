@@ -74,9 +74,11 @@ asts! {
     Root;
     Stmt [
         LetStmt,
+        WhileStmt,
         ExprStmt,
     ];
     LetStmt;
+    WhileStmt;
     ExprStmt;
     Expr [
         BinaryExpr,
@@ -113,6 +115,16 @@ impl LetStmt {
 
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl WhileStmt {
+    pub fn cond(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
+    }
+
+    pub fn block(&self) -> Option<Expr> {
+        self.0.children().filter_map(Expr::cast).nth(1)
     }
 }
 

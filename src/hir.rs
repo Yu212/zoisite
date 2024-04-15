@@ -17,6 +17,10 @@ pub enum Stmt {
         var_id: Option<VarId>,
         expr: ExprIdx,
     },
+    WhileStmt {
+        cond: ExprIdx,
+        block: ExprIdx,
+    },
     ExprStmt {
         expr: ExprIdx,
     },

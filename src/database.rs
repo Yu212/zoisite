@@ -37,6 +37,7 @@ impl Database {
     pub fn lower_stmt(&mut self, ast: ast::Stmt) -> Stmt {
         match ast {
             ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
+            ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
             ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
         }
     }
@@ -46,6 +47,14 @@ impl Database {
         Stmt::LetStmt {
             var_id,
             expr: self.exprs.alloc(expr),
+        }
+    }
+    pub fn lower_while_stmt(&mut self, ast: ast::WhileStmt) -> Stmt {
+        let cond = self.lower_expr(ast.cond());
+        let block = self.lower_expr(ast.block());
+        Stmt::WhileStmt {
+            cond: self.exprs.alloc(cond),
+            block: self.exprs.alloc(block),
         }
     }
     pub fn lower_expr_stmt(&mut self, ast: ast::ExprStmt) -> Stmt {
