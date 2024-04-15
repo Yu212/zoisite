@@ -192,7 +192,8 @@ impl<'ctx> Compiler<'ctx> {
                 Some(ret_val.into_int_value())
             },
             Expr::Block { stmts } => {
-                stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().flatten()
+                let i64_type = self.context.i64_type();
+                stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().unwrap_or(Some(i64_type.const_int(0, false)))
             },
             Expr::Literal { n } => {
                 let i64_type = self.context.i64_type();
