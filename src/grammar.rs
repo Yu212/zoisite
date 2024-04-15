@@ -112,9 +112,9 @@ pub fn if_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     expr(p, 0);
-    expr(p, 0);
+    block_expr(p);
     if p.eat(SyntaxKind::ElseKw) {
-        expr(p, 0);
+        block_expr(p);
     }
     m.complete(p, SyntaxKind::IfExpr)
 }
@@ -135,9 +135,8 @@ pub fn fn_call_expr(p: &mut Parser<'_>) -> CompletedMarker {
 }
 
 pub fn block_expr(p: &mut Parser<'_>) -> CompletedMarker {
-    assert!(p.at(SyntaxKind::OpenBrace));
     let m = p.start();
-    p.bump();
+    p.expect(SyntaxKind::OpenBrace);
     while !p.at(SyntaxKind::CloseBrace) && !p.at(SyntaxKind::Eof) {
         stmt(p);
     }
