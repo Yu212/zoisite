@@ -1,6 +1,6 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"let\")"
+expression: "tokenize(\"let if else while\")"
 ---
 (
     [
@@ -10,9 +10,39 @@ expression: "tokenize(\"let\")"
             range: 0..3,
         },
         Token {
+            kind: Whitespace,
+            text: " ",
+            range: 3..4,
+        },
+        Token {
+            kind: IfKw,
+            text: "if",
+            range: 4..6,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 6..7,
+        },
+        Token {
+            kind: ElseKw,
+            text: "else",
+            range: 7..11,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 11..12,
+        },
+        Token {
+            kind: WhileKw,
+            text: "while",
+            range: 12..17,
+        },
+        Token {
             kind: Eof,
             text: "",
-            range: 3..3,
+            range: 17..17,
         },
     ],
     [],

@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn ketword() {
-        insta::assert_debug_snapshot!(tokenize("let"));
+        insta::assert_debug_snapshot!(tokenize("let if else while"));
     }
 
     #[test]
