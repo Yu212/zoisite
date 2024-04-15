@@ -92,11 +92,11 @@ pub fn compile(text: &str) {
     println!("llvm ir:");
     module.print_to_stderr();
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
+    module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
     println!("output:");
     unsafe {
         engine.get_function::<unsafe extern "C" fn() -> i32>("main").unwrap().call();
     }
-    module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
     optimize(&module);
     module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
 }
