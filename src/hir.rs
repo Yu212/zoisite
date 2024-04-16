@@ -94,7 +94,7 @@ pub enum UnaryOp {
 impl UnaryOp {
     pub fn binding_power(&self) -> ((), u8) {
         match self {
-            UnaryOp::Neg => ((), 5),
+            UnaryOp::Neg => ((), 7),
         }
     }
 }
