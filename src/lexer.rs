@@ -52,6 +52,8 @@ impl<'a> Lexer<'a> {
             Some(c) if c.is_ascii_whitespace() => self.whitespace(),
             Some(c) if c.is_ascii_digit() => self.number(),
             Some(c) if Self::is_ident_start(c) => self.ident(start),
+            Some('=') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::EqEq },
+            Some('!') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Neq },
             Some(',') => SyntaxKind::Comma,
             Some(';') => SyntaxKind::Semicolon,
             Some('=') => SyntaxKind::Equals,
@@ -119,7 +121,7 @@ mod tests {
 
     #[test]
     fn operator() {
-        insta::assert_debug_snapshot!(tokenize("+ - * / %"));
+        insta::assert_debug_snapshot!(tokenize("+ - * / % == !="));
     }
 
     #[test]

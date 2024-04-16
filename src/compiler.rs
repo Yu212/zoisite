@@ -145,6 +145,7 @@ impl<'ctx> Compiler<'ctx> {
                     self.builder.build_store(ptr, rhs_value).ok()?;
                     return Some(rhs_value);
                 }
+                let i64_type = self.context.i64_type();
                 let lhs_value = self.compile_expr(self.db.exprs[lhs].clone())?;
                 let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
                 match op {
@@ -154,6 +155,8 @@ impl<'ctx> Compiler<'ctx> {
                     BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
                     BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
                     BinaryOp::Assign => unreachable!(),
+                    BinaryOp::EqEq => self.builder.build_int_z_extend(self.builder.build_int_compare(IntPredicate::EQ, lhs_value, rhs_value, "eq").ok()?, i64_type, "ext").ok(),
+                    BinaryOp::Neq => self.builder.build_int_z_extend(self.builder.build_int_compare(IntPredicate::NE, lhs_value, rhs_value, "ne").ok()?, i64_type, "ext").ok(),
                 }
             },
             Expr::Unary { op, expr } => {

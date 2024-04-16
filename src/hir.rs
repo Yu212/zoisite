@@ -73,17 +73,21 @@ pub enum BinaryOp {
     Div,
     Rem,
     Assign,
+    EqEq,
+    Neq,
 }
 
 impl BinaryOp {
     pub fn binding_power(&self) -> (u8, u8) {
         match self {
-            BinaryOp::Add => (3, 4),
-            BinaryOp::Sub => (3, 4),
-            BinaryOp::Mul => (5, 6),
-            BinaryOp::Div => (5, 6),
-            BinaryOp::Rem => (5, 6),
+            BinaryOp::Add => (5, 6),
+            BinaryOp::Sub => (5, 6),
+            BinaryOp::Mul => (7, 8),
+            BinaryOp::Div => (7, 8),
+            BinaryOp::Rem => (7, 8),
             BinaryOp::Assign => (2, 1),
+            BinaryOp::EqEq => (3, 4),
+            BinaryOp::Neq => (3, 4),
         }
     }
 }
@@ -96,7 +100,7 @@ pub enum UnaryOp {
 impl UnaryOp {
     pub fn binding_power(&self) -> ((), u8) {
         match self {
-            UnaryOp::Neg => ((), 7),
+            UnaryOp::Neg => ((), 9),
         }
     }
 }

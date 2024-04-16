@@ -4,6 +4,8 @@ pub enum SyntaxKind {
     Error,
     Whitespace,
     Eof,
+    EqEq,
+    Neq,
     Comma,
     Semicolon,
     Ident,

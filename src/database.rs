@@ -97,6 +97,8 @@ impl Database {
             SyntaxKind::Slash => BinaryOp::Div,
             SyntaxKind::Percent => BinaryOp::Rem,
             SyntaxKind::Equals => BinaryOp::Assign,
+            SyntaxKind::EqEq => BinaryOp::EqEq,
+            SyntaxKind::Neq => BinaryOp::Neq,
             _ => unreachable!(),
         };
         let lhs = self.lower_expr(ast.lhs());
