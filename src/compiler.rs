@@ -124,7 +124,6 @@ impl<'ctx> Compiler<'ctx> {
                 let i64_type = self.context.i64_type();
                 let &cur_func = self.function_stack.last().unwrap();
                 let unreachable_block = self.context.append_basic_block(cur_func, "unreachable");
-                let i64_type = self.context.i64_type();
                 let &(_, after_block) = self.loop_stack.last().unwrap();
                 self.builder.build_unconditional_branch(after_block).ok()?;
                 self.builder.position_at_end(unreachable_block);
