@@ -11,6 +11,7 @@ pub enum SyntaxKind {
     IfKw,
     ElseKw,
     WhileKw,
+    BreakKw,
     Equals,
     Plus,
     Minus,
@@ -34,6 +35,7 @@ pub enum SyntaxKind {
     Stmt,
     LetStmt,
     WhileStmt,
+    BreakStmt,
     ExprStmt,
 }
 

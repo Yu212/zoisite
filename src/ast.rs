@@ -75,10 +75,12 @@ asts! {
     Stmt [
         LetStmt,
         WhileStmt,
+        BreakStmt,
         ExprStmt,
     ];
     LetStmt;
     WhileStmt;
+    BreakStmt;
     ExprStmt;
     Expr [
         BinaryExpr,

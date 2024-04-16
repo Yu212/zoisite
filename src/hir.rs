@@ -21,6 +21,8 @@ pub enum Stmt {
         cond: ExprIdx,
         block: ExprIdx,
     },
+    BreakStmt {
+    },
     ExprStmt {
         expr: ExprIdx,
     },

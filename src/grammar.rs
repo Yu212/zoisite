@@ -18,6 +18,7 @@ pub fn stmt(p: &mut Parser<'_>) -> CompletedMarker {
     match p.current() {
         SyntaxKind::LetKw => let_stmt(p),
         SyntaxKind::WhileKw => while_stmt(p),
+        SyntaxKind::BreakKw => break_stmt(p),
         _ => expr_stmt(p),
     }
 }
@@ -40,6 +41,14 @@ pub fn while_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     expr(p, 0);
     block_expr(p);
     m.complete(p, SyntaxKind::WhileStmt)
+}
+
+pub fn break_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::BreakKw));
+    let m = p.start();
+    p.bump();
+    p.expect(SyntaxKind::Semicolon);
+    m.complete(p, SyntaxKind::BreakStmt)
 }
 
 pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {

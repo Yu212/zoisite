@@ -1,6 +1,6 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"let if else while\")"
+expression: "tokenize(\"let if else while break\")"
 ---
 (
     [
@@ -40,9 +40,19 @@ expression: "tokenize(\"let if else while\")"
             range: 12..17,
         },
         Token {
+            kind: Whitespace,
+            text: " ",
+            range: 17..18,
+        },
+        Token {
+            kind: BreakKw,
+            text: "break",
+            range: 18..23,
+        },
+        Token {
             kind: Eof,
             text: "",
-            range: 17..17,
+            range: 23..23,
         },
     ],
     [],

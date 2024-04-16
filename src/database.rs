@@ -14,6 +14,7 @@ pub struct Database {
     pub stmts: Arena<Stmt>,
     pub resolve_ctx: ResolveContext,
     pub diagnostics: Vec<Diagnostic>,
+    pub loop_nest: usize,
 }
 
 impl Database {
@@ -23,6 +24,7 @@ impl Database {
             stmts: Arena::default(),
             resolve_ctx: ResolveContext::new(),
             diagnostics: Vec::new(),
+            loop_nest: 0,
         }
     }
     pub fn lower_root(&mut self, ast: ast::Root) -> Root {
@@ -38,6 +40,7 @@ impl Database {
         match ast {
             ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
             ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
+            ast::Stmt::BreakStmt(ast) => self.lower_break_stmt(ast),
             ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
         }
     }
@@ -50,11 +53,21 @@ impl Database {
         }
     }
     pub fn lower_while_stmt(&mut self, ast: ast::WhileStmt) -> Stmt {
+        self.loop_nest += 1;
         let cond = self.lower_expr(ast.cond());
         let block = self.lower_expr(ast.block());
+        self.loop_nest -= 1;
         Stmt::WhileStmt {
             cond: self.exprs.alloc(cond),
             block: self.exprs.alloc(block),
+        }
+    }
+    pub fn lower_break_stmt(&mut self, ast: ast::BreakStmt) -> Stmt {
+        if self.loop_nest == 0 {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::BreakOutsideLoop, range));
+        }
+        Stmt::BreakStmt {
         }
     }
     pub fn lower_expr_stmt(&mut self, ast: ast::ExprStmt) -> Stmt {
