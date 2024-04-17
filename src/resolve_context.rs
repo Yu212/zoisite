@@ -41,13 +41,11 @@ impl ResolveContext {
         scope.define_fn(name, num_args, id);
         id
     }
-    pub fn resolve_var(&mut self, name: &EcoString) -> Option<&VariableInfo> {
-        let var_id = self.scope_stack.iter().rev().find_map(|scope| scope.resolve_var(name));
-        var_id.map(|var_id| self.get_var(var_id))
+    pub fn resolve_var(&mut self, name: &EcoString) -> Option<VarId> {
+        self.scope_stack.iter().rev().find_map(|scope| scope.resolve_var(name))
     }
-    pub fn resolve_fn(&mut self, name: &EcoString, num_args: usize) -> Option<&FunctionInfo> {
-        let fn_id = self.scope_stack.iter().rev().find_map(|scope| scope.resolve_fn(name, num_args));
-        fn_id.map(|fn_id| self.get_fn(fn_id))
+    pub fn resolve_fn(&mut self, name: &EcoString, num_args: usize) -> Option<FnId> {
+        self.scope_stack.iter().rev().find_map(|scope| scope.resolve_fn(name, num_args))
     }
     pub fn push_scope(&mut self) {
         self.scope_stack.push(Scope::new());

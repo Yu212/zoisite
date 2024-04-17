@@ -122,12 +122,11 @@ impl Database {
         }
     }
     pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
-        let var_info = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident.name));
-        if var_info.is_none() {
+        let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident.name));
+        if var_id.is_none() {
             let range = ast.syntax().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
         }
-        let var_id = var_info.map(|info| info.id);
         Expr::Ref {
             var_id,
         }
@@ -147,12 +146,11 @@ impl Database {
             let temp = self.lower_expr(Some(expr));
             self.exprs.alloc(temp)
         }).collect();
-        let fn_info = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident.name, args.len()));
-        if fn_info.is_none() {
+        let fn_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident.name, args.len()));
+        if fn_id.is_none() {
             let range = ast.syntax().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
         }
-        let fn_id = fn_info.map(|info| info.id);
         Expr::FnCall {
             fn_id,
             args,
