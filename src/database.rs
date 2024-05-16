@@ -157,7 +157,7 @@ impl Database {
         }
     }
     pub fn lower_block_expr(&mut self, ast: ast::BlockExpr) -> Expr {
-        self.resolve_ctx.push_scope();
+        self.resolve_ctx.push_scope(false);
         let stmts = ast.stmts().map(|stmt| {
             let temp = self.lower_stmt(stmt);
             self.stmts.alloc(temp)

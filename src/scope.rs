@@ -1,17 +1,20 @@
 use std::collections::HashMap;
 
 use ecow::EcoString;
+use crate::resolve_context::Place;
 
 pub struct Scope {
     variables: HashMap<EcoString, VarId>,
     functions: HashMap<(EcoString, usize), FnId>,
+    pub place: Place,
 }
 
 impl Scope {
-    pub fn new() -> Self {
+    pub fn new(place: Place) -> Self {
         Scope {
             variables: HashMap::new(),
             functions: HashMap::new(),
+            place,
         }
     }
     pub fn define_var(&mut self, name: EcoString, var_id: VarId) {

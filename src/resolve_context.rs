@@ -6,14 +6,17 @@ pub struct ResolveContext {
     pub scope_stack: Vec<Scope>,
     pub variables: Vec<VariableInfo>,
     pub functions: Vec<FunctionInfo>,
+    pub places: Vec<Place>,
 }
 
 impl ResolveContext {
     pub fn new() -> Self {
+        let place = Place(0);
         ResolveContext {
-            scope_stack: vec![Scope::new()],
+            scope_stack: vec![Scope::new(place)],
             variables: Vec::new(),
             functions: Vec::new(),
+            places: vec![place],
         }
     }
     pub fn define_builtins(&mut self) {
@@ -26,6 +29,7 @@ impl ResolveContext {
         self.variables.push(VariableInfo {
             name: name.clone(),
             id,
+            place: scope.place,
         });
         scope.define_var(name, id);
         id
@@ -37,6 +41,7 @@ impl ResolveContext {
             name: name.clone(),
             id,
             num_args,
+            place: scope.place,
         });
         scope.define_fn(name, num_args, id);
         id
@@ -47,8 +52,14 @@ impl ResolveContext {
     pub fn resolve_fn(&mut self, name: &EcoString, num_args: usize) -> Option<FnId> {
         self.scope_stack.iter().rev().find_map(|scope| scope.resolve_fn(name, num_args))
     }
-    pub fn push_scope(&mut self) {
-        self.scope_stack.push(Scope::new());
+    pub fn push_scope(&mut self, update_place: bool) {
+        let scope = self.scope_stack.last_mut().unwrap();
+        let place = if update_place {
+            let new_place = Place(self.places.len());
+            self.places.push(new_place);
+            new_place
+        } else { scope.place };
+        self.scope_stack.push(Scope::new(place));
     }
     pub fn pop_scope(&mut self) {
         self.scope_stack.pop();
@@ -64,10 +75,15 @@ impl ResolveContext {
 pub struct VariableInfo {
     pub name: EcoString,
     pub id: VarId,
+    pub place: Place,
 }
 
 pub struct FunctionInfo {
     pub name: EcoString,
     pub id: FnId,
     pub num_args: usize,
+    pub place: Place,
 }
+
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+pub struct Place(pub usize);
