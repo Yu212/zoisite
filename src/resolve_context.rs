@@ -1,8 +1,10 @@
+use std::iter;
 use ecow::EcoString;
 
 use crate::scope::{FnId, Scope, VarId};
 
 pub struct ResolveContext {
+    pub global_scope: Scope,
     pub scope_stack: Vec<Scope>,
     pub variables: Vec<VariableInfo>,
     pub functions: Vec<FunctionInfo>,
@@ -11,17 +13,19 @@ pub struct ResolveContext {
 
 impl ResolveContext {
     pub fn new() -> Self {
-        let place = Place(0);
+        let global_place = Place(0);
+        let root_place = Place(1);
         ResolveContext {
-            scope_stack: vec![Scope::new(place)],
+            global_scope: Scope::new(global_place),
+            scope_stack: vec![Scope::new(root_place)],
             variables: Vec::new(),
             functions: Vec::new(),
-            places: vec![place],
+            places: vec![global_place, root_place],
         }
     }
     pub fn define_builtins(&mut self) {
-        self.define_fn(EcoString::from("print"), 1);
-        self.define_fn(EcoString::from("input"), 0);
+        self.define_global_fn(EcoString::from("print"), 1);
+        self.define_global_fn(EcoString::from("input"), 0);
     }
     pub fn define_var(&mut self, name: EcoString) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -36,21 +40,42 @@ impl ResolveContext {
     }
     pub fn define_fn(&mut self, name: EcoString, num_args: usize) -> FnId {
         let scope = self.scope_stack.last_mut().unwrap();
+        let place = scope.place;
         let id = FnId(self.functions.len());
         self.functions.push(FunctionInfo {
             name: name.clone(),
             id,
             num_args,
-            place: scope.place,
+            place,
         });
         scope.define_fn(name, num_args, id);
         id
     }
+    pub fn define_global_fn(&mut self, name: EcoString, num_args: usize) -> FnId {
+        let place = self.global_scope.place;
+        let id = FnId(self.functions.len());
+        self.functions.push(FunctionInfo {
+            name: name.clone(),
+            id,
+            num_args,
+            place,
+        });
+        self.global_scope.define_fn(name, num_args, id);
+        id
+    }
     pub fn resolve_var(&mut self, name: &EcoString) -> Option<VarId> {
-        self.scope_stack.iter().rev().find_map(|scope| scope.resolve_var(name))
+        let place = self.scope_stack.last_mut().unwrap().place;
+        self.scope_stack.iter().rev()
+            .filter(|scope| place == scope.place)
+            .chain(iter::once(&self.global_scope))
+            .find_map(|scope| scope.resolve_var(name))
     }
     pub fn resolve_fn(&mut self, name: &EcoString, num_args: usize) -> Option<FnId> {
-        self.scope_stack.iter().rev().find_map(|scope| scope.resolve_fn(name, num_args))
+        let place = self.scope_stack.last_mut().unwrap().place;
+        self.scope_stack.iter().rev()
+            .filter(|scope| place == scope.place)
+            .chain(iter::once(&self.global_scope))
+            .find_map(|scope| scope.resolve_fn(name, num_args))
     }
     pub fn push_scope(&mut self, update_place: bool) {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -86,4 +111,4 @@ pub struct FunctionInfo {
 }
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
-pub struct Place(pub usize);
+pub struct Place(usize);
