@@ -1,4 +1,5 @@
 use std::iter;
+
 use ecow::EcoString;
 
 use crate::scope::{FnId, Scope, VarId};

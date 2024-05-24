@@ -93,6 +93,7 @@ impl<'a> Lexer<'a> {
             "else" => SyntaxKind::ElseKw,
             "while" => SyntaxKind::WhileKw,
             "break" => SyntaxKind::BreakKw,
+            "fun" => SyntaxKind::FunKw,
             _ => SyntaxKind::Ident,
         }
     }

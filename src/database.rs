@@ -4,7 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::ast;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
-use crate::hir::{BinaryOp, Expr, Identifier, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Func, Identifier, Root, Signature, Stmt, UnaryOp};
 use crate::language::SyntaxToken;
 use crate::resolve_context::ResolveContext;
 use crate::syntax_kind::SyntaxKind;
@@ -12,6 +12,7 @@ use crate::syntax_kind::SyntaxKind;
 pub struct Database {
     pub exprs: Arena<Expr>,
     pub stmts: Arena<Stmt>,
+    pub funcs: Arena<Func>,
     pub resolve_ctx: ResolveContext,
     pub diagnostics: Vec<Diagnostic>,
     pub loop_nest: usize,
@@ -22,6 +23,7 @@ impl Database {
         Database {
             exprs: Arena::default(),
             stmts: Arena::default(),
+            funcs: Arena::default(),
             resolve_ctx: ResolveContext::new(),
             diagnostics: Vec::new(),
             loop_nest: 0,
@@ -36,12 +38,33 @@ impl Database {
             }).collect(),
         }
     }
+    pub fn lower_func(&mut self, ast: ast::Func) -> Stmt {
+        let arg_list = ast.arg_list();
+        let args: Vec<_> = ast.arg_list().flat_map(|ident| {
+            self.lower_ident(Some(ident))
+        }).collect();
+        let name = self.lower_ident(ast.name()).map(|ident| ident.name);
+        let sig = Signature {
+            name: name.clone(),
+            num_args: args.len(),
+        };
+        let fn_id = name.map(|name| self.resolve_ctx.define_fn(name.clone(), sig.num_args));
+        let func = Func {
+            fn_id,
+            sig,
+            block: self.lower_expr(ast.block())
+        };
+        Stmt::Func {
+            func: self.funcs.alloc(func),
+        }
+    }
     pub fn lower_stmt(&mut self, ast: ast::Stmt) -> Stmt {
         match ast {
             ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
             ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
             ast::Stmt::BreakStmt(ast) => self.lower_break_stmt(ast),
             ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
+            ast::Stmt::Func(ast) => self.lower_func(ast),
         }
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {

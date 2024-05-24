@@ -72,11 +72,13 @@ macro_rules! ast {
 
 asts! {
     Root;
+    Func;
     Stmt [
         LetStmt,
         WhileStmt,
         BreakStmt,
         ExprStmt,
+        Func,
     ];
     LetStmt;
     WhileStmt;
@@ -105,6 +107,26 @@ asts! {
 impl Root {
     pub fn stmts(&self) -> impl Iterator<Item = Stmt> {
         self.0.children().filter_map(Stmt::cast)
+    }
+}
+
+impl Func {
+    pub fn name(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Ident)
+    }
+
+    pub fn arg_list(&self) -> impl Iterator<Item = SyntaxToken> {
+        self.0.children().find(|node| node.kind() == SyntaxKind::ArgList)
+            .into_iter()
+            .flat_map(|arg_list| arg_list.children_with_tokens())
+            .filter_map(SyntaxElement::into_token)
+            .filter(|token| token.kind() == SyntaxKind::Ident)
+    }
+
+    pub fn block(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
     }
 }
 

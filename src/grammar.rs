@@ -19,8 +19,32 @@ pub fn stmt(p: &mut Parser<'_>) -> CompletedMarker {
         SyntaxKind::LetKw => let_stmt(p),
         SyntaxKind::WhileKw => while_stmt(p),
         SyntaxKind::BreakKw => break_stmt(p),
+        SyntaxKind::FunKw => func_stmt(p),
         _ => expr_stmt(p),
     }
+}
+
+pub fn func_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::FunKw));
+    let m = p.start();
+    p.bump();
+    p.expect(SyntaxKind::Ident);
+    arg_list(p);
+    block_expr(p);
+    m.complete(p, SyntaxKind::Func)
+}
+
+pub fn arg_list(p: &mut Parser<'_>) -> CompletedMarker {
+    let m = p.start();
+    p.expect(SyntaxKind::OpenParen);
+    if !p.at(SyntaxKind::CloseParen) {
+        p.expect(SyntaxKind::Ident);
+        while p.eat(SyntaxKind::Comma) {
+            p.expect(SyntaxKind::Ident);
+        }
+    }
+    p.expect(SyntaxKind::CloseParen);
+    m.complete(p, SyntaxKind::ArgList)
 }
 
 pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {

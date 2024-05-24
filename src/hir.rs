@@ -5,10 +5,24 @@ use crate::scope::{FnId, VarId};
 
 type ExprIdx = Idx<Expr>;
 type StmtIdx = Idx<Stmt>;
+type FuncIdx = Idx<Func>;
 
 #[derive(Debug)]
 pub struct Root {
     pub stmts: Vec<StmtIdx>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Func {
+    pub fn_id: Option<FnId>,
+    pub sig: Signature,
+    pub block: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct Signature {
+    pub name: Option<EcoString>,
+    pub num_args: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +40,9 @@ pub enum Stmt {
     ExprStmt {
         expr: ExprIdx,
     },
+    Func {
+        func: FuncIdx,
+    }
 }
 
 #[derive(Debug, Clone)]

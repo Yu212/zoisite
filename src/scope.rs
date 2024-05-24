@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use ecow::EcoString;
+
 use crate::resolve_context::Place;
 
 pub struct Scope {

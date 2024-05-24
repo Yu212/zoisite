@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter;
 
 use inkwell::{AddressSpace, IntPredicate};
 use inkwell::basic_block::BasicBlock;
@@ -8,7 +9,7 @@ use inkwell::module::Module;
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 
 use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Func, Root, Stmt, UnaryOp};
 use crate::scope::{FnId, VarId};
 
 pub struct Compiler<'ctx> {
@@ -18,7 +19,7 @@ pub struct Compiler<'ctx> {
     pub builder: Builder<'ctx>,
     pub addresses: HashMap<VarId, PointerValue<'ctx>>,
     pub functions: HashMap<FnId, FunctionValue<'ctx>>,
-    pub function_stack: Vec<FunctionValue<'ctx>>,
+    pub cur_function: Option<FunctionValue<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>,
 }
 
@@ -33,16 +34,20 @@ impl<'ctx> Compiler<'ctx> {
             builder,
             addresses: HashMap::new(),
             functions: HashMap::new(),
-            function_stack: Vec::new(),
+            cur_function: None,
             loop_stack: Vec::new(),
         }
     }
     pub fn compile(mut self, root: &Root) -> Module<'ctx> {
         self.add_builtins();
+        let funcs: Vec<_> = self.db.funcs.values().cloned().collect();
+        for func in funcs {
+            self.compile_func(func.clone());
+        }
         let i32_type = self.context.i32_type();
         let fn_type = i32_type.fn_type(&[], false);
         let function = self.module.add_function("main", fn_type, None);
-        self.function_stack.push(function);
+        self.cur_function = Some(function);
         let basic_block = self.context.append_basic_block(function, "entry");
         self.builder.position_at_end(basic_block);
         self.compile_root(&root);
@@ -100,7 +105,7 @@ impl<'ctx> Compiler<'ctx> {
             },
             Stmt::WhileStmt { cond, block } => {
                 let i64_type = self.context.i64_type();
-                let &cur_func = self.function_stack.last().unwrap();
+                let cur_func = self.cur_function.unwrap();
                 let cond_block = self.context.append_basic_block(cur_func, "loopcond");
                 let loop_block = self.context.append_basic_block(cur_func, "loop");
                 let after_block = self.context.append_basic_block(cur_func, "after");
@@ -122,7 +127,7 @@ impl<'ctx> Compiler<'ctx> {
             },
             Stmt::BreakStmt {} => {
                 let i64_type = self.context.i64_type();
-                let &cur_func = self.function_stack.last().unwrap();
+                let cur_func = self.cur_function.unwrap();
                 let unreachable_block = self.context.append_basic_block(cur_func, "unreachable");
                 let &(_, after_block) = self.loop_stack.last().unwrap();
                 self.builder.build_unconditional_branch(after_block).ok()?;
@@ -132,6 +137,24 @@ impl<'ctx> Compiler<'ctx> {
             Stmt::ExprStmt { expr } => {
                 self.compile_expr(self.db.exprs[expr].clone())
             },
+            Stmt::Func { func } => {
+                let i64_type = self.context.i64_type();
+                Some(i64_type.const_int(0, false))
+            },
+        }
+    }
+    fn compile_func(&mut self, func: Func) {
+        let i64_type = self.context.i64_type();
+        let arg_type: Vec<_> = iter::repeat(i64_type.into()).take(func.sig.num_args).collect();
+        let func_type = i64_type.fn_type(arg_type.as_slice(), false);
+        if let (Some(name), Some(fn_id)) = (func.sig.name, func.fn_id) {
+            let func_value = self.module.add_function(name.as_str(), func_type, None);
+            self.functions.insert(fn_id, func_value);
+            self.cur_function = Some(func_value);
+            let basic_block = self.context.append_basic_block(func_value, "entry");
+            self.builder.position_at_end(basic_block);
+            let ret = self.compile_expr(func.block).unwrap();
+            self.builder.build_return(Some(&ret)).unwrap();
         }
     }
     fn compile_expr(&mut self, expr: Expr) -> Option<IntValue<'ctx>> {
@@ -175,7 +198,7 @@ impl<'ctx> Compiler<'ctx> {
             Expr::If { cond, then_expr, else_expr } => {
                 let i64_type = self.context.i64_type();
                 let cond_val = self.compile_expr(self.db.exprs[cond].clone())?;
-                let &cur_func = self.function_stack.last().unwrap();
+                let cur_func = self.cur_function.unwrap();
                 let then_block = self.context.append_basic_block(cur_func, "then");
                 let else_block = self.context.append_basic_block(cur_func, "else");
                 let merge_block = self.context.append_basic_block(cur_func, "merge");
