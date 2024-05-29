@@ -1,5 +1,7 @@
+use std::fs::File;
 use std::mem;
 use std::path::PathBuf;
+use std::process::Command;
 
 use inkwell::context::Context;
 use inkwell::module::Module;
@@ -56,49 +58,58 @@ pub fn compile(text: &str) {
     let (tokens, lexer_errors) = lexer.tokenize();
     let parser = Parser::new(tokens);
     let (syntax, parser_errors) = parser.parse();
-    println!("input: ");
-    println!("{:?}", text);
-    println!();
-    println!("lexer errors: ");
+    eprintln!("lexer errors: ");
     for err in &lexer_errors {
-        println!("{:?}", err);
+        eprintln!("{:?}", err);
     }
-    println!();
-    println!("parser errors: ");
+    eprintln!();
+    eprintln!("parser errors: ");
     for err in &parser_errors {
-        println!("{:?}", err);
+        eprintln!("{:?}", err);
     }
-    println!();
-    println!("tree: ");
-    println!("{:#?}", syntax);
+    eprintln!();
+    eprintln!("tree: ");
+    eprintln!("{:#?}", syntax);
     let root = Root::cast(syntax).unwrap();
     let mut db = Database::new();
     let hir = db.lower_root(root);
     let lower_errors = mem::take(&mut db.diagnostics);
-    println!();
-    println!("lower errors: ");
+    eprintln!();
+    eprintln!("lower errors: ");
     for err in &lower_errors {
-        println!("{:?}", err);
+        eprintln!("{:?}", err);
     }
-    println!();
-    println!("hir: ");
-    println!("{:?}", hir);
+    eprintln!();
+    eprintln!("hir: ");
+    eprintln!("{:?}", hir);
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
     let context = Context::create();
     let compiler = Compiler::new(&context, db, "main");
     let module = compiler.compile(&hir);
-    println!("llvm ir:");
+    eprintln!("llvm ir:");
     module.print_to_stderr();
-    let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
     module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
-    println!("output:");
-    unsafe {
-        engine.get_function::<unsafe extern "C" fn() -> i32>("main").unwrap().call();
-    }
     optimize(&module);
     module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
+    run_llvm_ir();
+}
+
+pub fn run_llvm_ir() {
+    let out = Command::new("/usr/lib/llvm-16/bin/clang")
+        .current_dir(PathBuf::from("./files/"))
+        .args(vec!["-O2", "-o", "a.out", "output_optimized.ll"])
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
+    Command::new("./files/a.out")
+        .stdin(File::open("./files/input.txt").unwrap())
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
 }
 
 pub fn optimize(module: &Module) {
