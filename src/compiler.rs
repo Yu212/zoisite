@@ -145,7 +145,7 @@ impl<'ctx> Compiler<'ctx> {
     }
     fn compile_func(&mut self, func: Func) {
         let i64_type = self.context.i64_type();
-        let arg_type: Vec<_> = iter::repeat(i64_type.into()).take(func.sig.num_args).collect();
+        let arg_type: Vec<_> = iter::repeat(i64_type.into()).take(func.sig.args.len()).collect();
         let func_type = i64_type.fn_type(arg_type.as_slice(), false);
         if let (Some(name), Some(fn_id)) = (func.sig.name, func.fn_id) {
             let func_value = self.module.add_function(name.as_str(), func_type, None);
@@ -153,6 +153,12 @@ impl<'ctx> Compiler<'ctx> {
             self.cur_function = Some(func_value);
             let basic_block = self.context.append_basic_block(func_value, "entry");
             self.builder.position_at_end(basic_block);
+            for (param, var_id) in func_value.get_param_iter().zip(func.sig.args) {
+                let var_name = &self.db.resolve_ctx.get_var(var_id).name;
+                let addr = self.builder.build_alloca(i64_type, var_name.as_str()).ok().unwrap();
+                self.builder.build_store(addr, param.into_int_value());
+                self.addresses.insert(var_id, addr);
+            }
             let ret = self.compile_expr(func.block).unwrap();
             self.builder.build_return(Some(&ret)).unwrap();
         }

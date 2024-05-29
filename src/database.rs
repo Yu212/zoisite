@@ -40,15 +40,18 @@ impl Database {
     }
     pub fn lower_func(&mut self, ast: ast::Func) -> Stmt {
         let arg_list = ast.arg_list();
-        let args: Vec<_> = ast.arg_list().flat_map(|ident| {
-            self.lower_ident(Some(ident))
-        }).collect();
+        let args: Vec<_> = ast.arg_list()
+            .flat_map(|token| self.lower_ident(Some(token)))
+            .collect();
+        let args: Vec<_> = args.iter()
+            .map(|ident| self.resolve_ctx.define_var(ident.name.clone()))
+            .collect();
         let name = self.lower_ident(ast.name()).map(|ident| ident.name);
         let sig = Signature {
             name: name.clone(),
-            num_args: args.len(),
+            args,
         };
-        let fn_id = name.map(|name| self.resolve_ctx.define_fn(name.clone(), sig.num_args));
+        let fn_id = name.map(|name| self.resolve_ctx.define_fn(name.clone(), sig.args.len()));
         let func = Func {
             fn_id,
             sig,

@@ -22,7 +22,7 @@ pub struct Func {
 #[derive(Debug, Clone)]
 pub struct Signature {
     pub name: Option<EcoString>,
-    pub num_args: usize,
+    pub args: Vec<VarId>,
 }
 
 #[derive(Debug, Clone)]
