@@ -97,7 +97,7 @@ pub fn compile(text: &str) {
 }
 
 pub fn run_llvm_ir() {
-    let out = Command::new("/usr/lib/llvm-16/bin/clang")
+    Command::new("/usr/lib/llvm-16/bin/clang")
         .current_dir(PathBuf::from("./files/"))
         .args(vec!["-O2", "-o", "a.out", "output_optimized.ll"])
         .spawn()

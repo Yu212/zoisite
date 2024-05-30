@@ -39,7 +39,6 @@ impl Database {
         }
     }
     pub fn lower_func(&mut self, ast: ast::Func) -> Stmt {
-        let arg_list = ast.arg_list();
         let args: Vec<_> = ast.arg_list()
             .flat_map(|token| self.lower_ident(Some(token)))
             .collect();

@@ -137,7 +137,7 @@ impl<'ctx> Compiler<'ctx> {
             Stmt::ExprStmt { expr } => {
                 self.compile_expr(self.db.exprs[expr].clone())
             },
-            Stmt::Func { func } => {
+            Stmt::Func { func: _ } => {
                 let i64_type = self.context.i64_type();
                 Some(i64_type.const_int(0, false))
             },
@@ -156,7 +156,7 @@ impl<'ctx> Compiler<'ctx> {
             for (param, var_id) in func_value.get_param_iter().zip(func.sig.args) {
                 let var_name = &self.db.resolve_ctx.get_var(var_id).name;
                 let addr = self.builder.build_alloca(i64_type, var_name.as_str()).ok().unwrap();
-                self.builder.build_store(addr, param.into_int_value());
+                self.builder.build_store(addr, param.into_int_value()).ok().unwrap();
                 self.addresses.insert(var_id, addr);
             }
             let ret = self.compile_expr(func.block).unwrap();
@@ -166,14 +166,14 @@ impl<'ctx> Compiler<'ctx> {
     fn compile_expr(&mut self, expr: Expr) -> Option<IntValue<'ctx>> {
         match expr {
             Expr::Missing => None,
+            Expr::Binary { op: BinaryOp::Assign, lhs, rhs } => {
+                let Expr::Ref { var_id } = self.db.exprs[lhs].clone() else { unreachable!() };
+                let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
+                let ptr = self.addresses[&var_id?];
+                self.builder.build_store(ptr, rhs_value).ok()?;
+                return Some(rhs_value);
+            }
             Expr::Binary { op, lhs, rhs } => {
-                if op == BinaryOp::Assign {
-                    let Expr::Ref { var_id } = self.db.exprs[lhs].clone() else { unreachable!() };
-                    let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
-                    let ptr = self.addresses[&var_id?];
-                    self.builder.build_store(ptr, rhs_value).ok()?;
-                    return Some(rhs_value);
-                }
                 let i64_type = self.context.i64_type();
                 let lhs_value = self.compile_expr(self.db.exprs[lhs].clone())?;
                 let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
@@ -183,9 +183,9 @@ impl<'ctx> Compiler<'ctx> {
                     BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "mul").ok(),
                     BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
                     BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
-                    BinaryOp::Assign => unreachable!(),
                     BinaryOp::EqEq => self.builder.build_int_z_extend(self.builder.build_int_compare(IntPredicate::EQ, lhs_value, rhs_value, "eq").ok()?, i64_type, "ext").ok(),
                     BinaryOp::Neq => self.builder.build_int_z_extend(self.builder.build_int_compare(IntPredicate::NE, lhs_value, rhs_value, "ne").ok()?, i64_type, "ext").ok(),
+                    BinaryOp::Assign => unreachable!(),
                 }
             },
             Expr::Unary { op, expr } => {
