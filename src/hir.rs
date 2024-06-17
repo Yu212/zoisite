@@ -1,6 +1,7 @@
 use ecow::EcoString;
 use la_arena::Idx;
 
+use crate::resolve_context::FuncInfo;
 use crate::scope::{FnId, VarId};
 
 type ExprIdx = Idx<Expr>;
@@ -14,15 +15,8 @@ pub struct Root {
 
 #[derive(Debug, Clone)]
 pub struct Func {
-    pub fn_id: Option<FnId>,
-    pub sig: Signature,
+    pub fn_info: Option<FuncInfo>,
     pub block: Expr,
-}
-
-#[derive(Debug, Clone)]
-pub struct Signature {
-    pub name: Option<EcoString>,
-    pub args: Vec<VarId>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,7 +34,7 @@ pub enum Stmt {
     ExprStmt {
         expr: ExprIdx,
     },
-    Func {
+    FuncDef {
         func: FuncIdx,
     }
 }

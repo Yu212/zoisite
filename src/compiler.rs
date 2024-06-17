@@ -137,7 +137,7 @@ impl<'ctx> Compiler<'ctx> {
             Stmt::ExprStmt { expr } => {
                 self.compile_expr(self.db.exprs[expr].clone())
             },
-            Stmt::Func { func: _ } => {
+            Stmt::FuncDef { func: _ } => {
                 let i64_type = self.context.i64_type();
                 Some(i64_type.const_int(0, false))
             },
@@ -145,15 +145,15 @@ impl<'ctx> Compiler<'ctx> {
     }
     fn compile_func(&mut self, func: Func) {
         let i64_type = self.context.i64_type();
-        let arg_type: Vec<_> = iter::repeat(i64_type.into()).take(func.sig.args.len()).collect();
-        let func_type = i64_type.fn_type(arg_type.as_slice(), false);
-        if let (Some(name), Some(fn_id)) = (func.sig.name, func.fn_id) {
-            let func_value = self.module.add_function(name.as_str(), func_type, None);
-            self.functions.insert(fn_id, func_value);
+        if let Some(fn_info) = func.fn_info {
+            let arg_type: Vec<_> = iter::repeat(i64_type.into()).take(fn_info.args.len()).collect();
+            let func_type = i64_type.fn_type(arg_type.as_slice(), false);
+            let func_value = self.module.add_function(fn_info.name.as_str(), func_type, None);
+            self.functions.insert(fn_info.id, func_value);
             self.cur_function = Some(func_value);
             let basic_block = self.context.append_basic_block(func_value, "entry");
             self.builder.position_at_end(basic_block);
-            for (param, var_id) in func_value.get_param_iter().zip(func.sig.args) {
+            for (param, var_id) in func_value.get_param_iter().zip(fn_info.args) {
                 let var_name = &self.db.resolve_ctx.get_var(var_id).name;
                 let addr = self.builder.build_alloca(i64_type, var_name.as_str()).ok().unwrap();
                 self.builder.build_store(addr, param.into_int_value()).ok().unwrap();

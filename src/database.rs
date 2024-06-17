@@ -4,7 +4,7 @@ use rowan::ast::AstNode;
 
 use crate::ast;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
-use crate::hir::{BinaryOp, Expr, Func, Identifier, Root, Signature, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Func, Identifier, Root, Stmt, UnaryOp};
 use crate::language::SyntaxToken;
 use crate::resolve_context::ResolveContext;
 use crate::syntax_kind::SyntaxKind;
@@ -38,7 +38,8 @@ impl Database {
             }).collect(),
         }
     }
-    pub fn lower_func(&mut self, ast: ast::Func) -> Stmt {
+    pub fn lower_func(&mut self, ast: ast::FuncDef) -> Stmt {
+        self.resolve_ctx.push_scope(true);
         let args: Vec<_> = ast.arg_list()
             .flat_map(|token| self.lower_ident(Some(token)))
             .collect();
@@ -46,17 +47,13 @@ impl Database {
             .map(|ident| self.resolve_ctx.define_var(ident.name.clone()))
             .collect();
         let name = self.lower_ident(ast.name()).map(|ident| ident.name);
-        let sig = Signature {
-            name: name.clone(),
-            args,
-        };
-        let fn_id = name.map(|name| self.resolve_ctx.define_fn(name.clone(), sig.args.len()));
+        let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), args));
         let func = Func {
-            fn_id,
-            sig,
+            fn_info,
             block: self.lower_expr(ast.block())
         };
-        Stmt::Func {
+        self.resolve_ctx.pop_scope();
+        Stmt::FuncDef {
             func: self.funcs.alloc(func),
         }
     }
@@ -66,7 +63,7 @@ impl Database {
             ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
             ast::Stmt::BreakStmt(ast) => self.lower_break_stmt(ast),
             ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
-            ast::Stmt::Func(ast) => self.lower_func(ast),
+            ast::Stmt::FuncDef(ast) => self.lower_func(ast),
         }
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {

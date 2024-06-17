@@ -31,7 +31,7 @@ pub fn func_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     p.expect(SyntaxKind::Ident);
     arg_list(p);
     block_expr(p);
-    m.complete(p, SyntaxKind::Func)
+    m.complete(p, SyntaxKind::FuncDef)
 }
 
 pub fn arg_list(p: &mut Parser<'_>) -> CompletedMarker {

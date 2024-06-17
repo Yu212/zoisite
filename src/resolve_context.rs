@@ -8,7 +8,7 @@ pub struct ResolveContext {
     pub global_scope: Scope,
     pub scope_stack: Vec<Scope>,
     pub variables: Vec<VariableInfo>,
-    pub functions: Vec<FunctionInfo>,
+    pub functions: Vec<FuncInfo>,
     pub places: Vec<Place>,
 }
 
@@ -25,8 +25,8 @@ impl ResolveContext {
         }
     }
     pub fn define_builtins(&mut self) {
-        self.define_global_fn(EcoString::from("print"), 1);
-        self.define_global_fn(EcoString::from("input"), 0);
+        self.define_global_fn(EcoString::from("print"), vec![EcoString::from("n")]);
+        self.define_global_fn(EcoString::from("input"), vec![]);
     }
     pub fn define_var(&mut self, name: EcoString) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -39,30 +39,38 @@ impl ResolveContext {
         scope.define_var(name, id);
         id
     }
-    pub fn define_fn(&mut self, name: EcoString, num_args: usize) -> FnId {
-        let scope = self.scope_stack.last_mut().unwrap();
+    pub fn define_fn(&mut self, name: EcoString, args: Vec<VarId>) -> FuncInfo {
+        let idx = self.scope_stack.len() - 2;
+        let scope = self.scope_stack.get_mut(idx).unwrap();
         let place = scope.place;
         let id = FnId(self.functions.len());
-        self.functions.push(FunctionInfo {
-            name: name.clone(),
+        scope.define_fn(name.clone(), args.len(), id);
+        let fun_info = FuncInfo {
+            name,
             id,
-            num_args,
+            args,
             place,
-        });
-        scope.define_fn(name, num_args, id);
-        id
+        };
+        self.functions.push(fun_info.clone());
+        fun_info
     }
-    pub fn define_global_fn(&mut self, name: EcoString, num_args: usize) -> FnId {
+    pub fn define_global_fn(&mut self, name: EcoString, args: Vec<EcoString>) -> FuncInfo {
+        self.push_scope(true);
+        let args: Vec<_> = args.iter()
+            .map(|name| self.define_var(name.clone()))
+            .collect();
+        self.pop_scope();
         let place = self.global_scope.place;
         let id = FnId(self.functions.len());
-        self.functions.push(FunctionInfo {
-            name: name.clone(),
+        self.global_scope.define_fn(name.clone(), args.len(), id);
+        let fun_info = FuncInfo {
+            name,
             id,
-            num_args,
+            args,
             place,
-        });
-        self.global_scope.define_fn(name, num_args, id);
-        id
+        };
+        self.functions.push(fun_info.clone());
+        fun_info
     }
     pub fn resolve_var(&mut self, name: &EcoString) -> Option<VarId> {
         let place = self.scope_stack.last_mut().unwrap().place;
@@ -93,7 +101,7 @@ impl ResolveContext {
     pub fn get_var(&self, var_id: VarId) -> &VariableInfo {
         &self.variables[var_id.0]
     }
-    pub fn get_fn(&self, fn_id: FnId) -> &FunctionInfo {
+    pub fn get_fn(&self, fn_id: FnId) -> &FuncInfo {
         &self.functions[fn_id.0]
     }
 }
@@ -104,10 +112,11 @@ pub struct VariableInfo {
     pub place: Place,
 }
 
-pub struct FunctionInfo {
+#[derive(Debug, Clone)]
+pub struct FuncInfo {
     pub name: EcoString,
     pub id: FnId,
-    pub num_args: usize,
+    pub args: Vec<VarId>,
     pub place: Place,
 }
 

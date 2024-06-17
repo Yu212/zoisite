@@ -27,7 +27,7 @@ pub enum SyntaxKind {
     OpenBrace,
     CloseBrace,
     Root,
-    Func,
+    FuncDef,
     ArgList,
     Literal,
     BinaryExpr,

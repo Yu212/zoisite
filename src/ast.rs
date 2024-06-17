@@ -72,14 +72,14 @@ macro_rules! ast {
 
 asts! {
     Root;
-    Func;
     Stmt [
         LetStmt,
         WhileStmt,
         BreakStmt,
         ExprStmt,
-        Func,
+        FuncDef,
     ];
+    FuncDef;
     LetStmt;
     WhileStmt;
     BreakStmt;
@@ -110,7 +110,7 @@ impl Root {
     }
 }
 
-impl Func {
+impl FuncDef {
     pub fn name(&self) -> Option<SyntaxToken> {
         self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
