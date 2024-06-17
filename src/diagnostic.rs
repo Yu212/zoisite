@@ -5,11 +5,11 @@ use crate::syntax_kind::SyntaxKind;
 #[derive(Debug)]
 pub struct Diagnostic {
     pub kind: DiagnosticKind,
-    pub range: TextRange,
+    pub range: Option<TextRange>,
 }
 
 impl Diagnostic {
-    pub fn new(kind: DiagnosticKind, range: TextRange) -> Self {
+    pub fn new(kind: DiagnosticKind, range: Option<TextRange>) -> Self {
         Self {
             kind, range
         }
@@ -28,4 +28,5 @@ pub enum DiagnosticKind {
     UndeclaredFunction,
     InvalidLhs,
     BreakOutsideLoop,
+    TypeUnmatched,
 }

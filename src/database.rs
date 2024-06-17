@@ -87,7 +87,7 @@ impl Database {
     pub fn lower_break_stmt(&mut self, ast: ast::BreakStmt) -> Stmt {
         if self.loop_nest == 0 {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::BreakOutsideLoop, range));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::BreakOutsideLoop, Some(range)));
         }
         Stmt::BreakStmt {
         }
@@ -128,7 +128,7 @@ impl Database {
         if let Expr::Ref { var_id: _ } = lhs {
         } else if op == BinaryOp::Assign {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidLhs, range));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidLhs, Some(range)));
         }
         Expr::Binary {
             op,
@@ -147,7 +147,7 @@ impl Database {
         let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident.name));
         if var_id.is_none() {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, Some(range)));
         }
         Expr::Ref {
             var_id,
@@ -171,7 +171,7 @@ impl Database {
         let fn_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident.name, args.len()));
         if fn_id.is_none() {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, Some(range)));
         }
         Expr::FnCall {
             fn_id,
@@ -193,7 +193,7 @@ impl Database {
         let parsed = ast.parse();
         if parsed.is_none() {
             let range = ast.syntax().first_token().unwrap().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, range));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
         }
         Expr::Literal {
             n: parsed,
