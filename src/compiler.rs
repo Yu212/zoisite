@@ -71,8 +71,8 @@ impl<'ctx> Compiler<'ctx> {
             let basic_block = self.context.append_basic_block(print_fn, "entry");
             self.builder.position_at_end(basic_block);
             let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_str").unwrap();
-            let arg = print_fn.get_first_param().unwrap();
-            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), arg.into()], "").expect("build_call failed");
+            let param = print_fn.get_first_param().unwrap();
+            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), param.into()], "").expect("build_call failed");
             self.builder.build_return(Some(&i64_type.const_int(0, false))).unwrap();
             self.functions.insert(FnId(0), print_fn);
         }
@@ -146,14 +146,14 @@ impl<'ctx> Compiler<'ctx> {
     fn compile_func(&mut self, func: Func) {
         let i64_type = self.context.i64_type();
         if let Some(fn_info) = func.fn_info {
-            let arg_type: Vec<_> = iter::repeat(i64_type.into()).take(fn_info.args.len()).collect();
-            let func_type = i64_type.fn_type(arg_type.as_slice(), false);
+            let param_type: Vec<_> = iter::repeat(i64_type.into()).take(fn_info.params.len()).collect();
+            let func_type = i64_type.fn_type(param_type.as_slice(), false);
             let func_value = self.module.add_function(fn_info.name.as_str(), func_type, None);
             self.functions.insert(fn_info.id, func_value);
             self.cur_function = Some(func_value);
             let basic_block = self.context.append_basic_block(func_value, "entry");
             self.builder.position_at_end(basic_block);
-            for (param, var_id) in func_value.get_param_iter().zip(fn_info.args) {
+            for (param, var_id) in func_value.get_param_iter().zip(fn_info.params) {
                 let var_name = &self.db.resolve_ctx.get_var(var_id).name;
                 let addr = self.builder.build_alloca(i64_type, var_name.as_str()).ok().unwrap();
                 self.builder.build_store(addr, param.into_int_value()).ok().unwrap();

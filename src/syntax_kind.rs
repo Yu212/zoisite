@@ -28,7 +28,7 @@ pub enum SyntaxKind {
     CloseBrace,
     Root,
     FuncDef,
-    ArgList,
+    ParamList,
     Literal,
     BinaryExpr,
     PrefixExpr,

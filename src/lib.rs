@@ -15,6 +15,7 @@ use crate::compiler::Compiler;
 use crate::database::Database;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use crate::type_checker::TypeChecker;
 
 pub mod parser;
 pub mod grammar;
@@ -31,6 +32,7 @@ pub mod database;
 pub mod token_set;
 pub mod resolve_context;
 pub mod scope;
+pub mod type_checker;
 
 pub fn compile_no_output(text: &str) {
     let lexer = Lexer::new(text);
@@ -85,9 +87,20 @@ pub fn compile(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
+    let type_checker = TypeChecker::new();
+    let type_check_errors = type_checker.check(&db);
+    eprintln!();
+    eprintln!("type check errors: ");
+    for err in &type_check_errors {
+        eprintln!("{:?}", err);
+    }
+    if !type_check_errors.is_empty() {
+        return;
+    }
     let context = Context::create();
     let compiler = Compiler::new(&context, db, "main");
     let module = compiler.compile(&hir);
+    eprintln!();
     eprintln!("llvm ir:");
     module.print_to_stderr();
     module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");

@@ -29,12 +29,12 @@ pub fn func_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     p.expect(SyntaxKind::Ident);
-    arg_list(p);
+    param_list(p);
     block_expr(p);
     m.complete(p, SyntaxKind::FuncDef)
 }
 
-pub fn arg_list(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::OpenParen);
     if !p.at(SyntaxKind::CloseParen) {
@@ -44,7 +44,7 @@ pub fn arg_list(p: &mut Parser<'_>) -> CompletedMarker {
         }
     }
     p.expect(SyntaxKind::CloseParen);
-    m.complete(p, SyntaxKind::ArgList)
+    m.complete(p, SyntaxKind::ParamList)
 }
 
 pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {

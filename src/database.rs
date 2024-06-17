@@ -40,14 +40,14 @@ impl Database {
     }
     pub fn lower_func(&mut self, ast: ast::FuncDef) -> Stmt {
         self.resolve_ctx.push_scope(true);
-        let args: Vec<_> = ast.arg_list()
+        let params: Vec<_> = ast.param_list()
             .flat_map(|token| self.lower_ident(Some(token)))
             .collect();
-        let args: Vec<_> = args.iter()
+        let params: Vec<_> = params.iter()
             .map(|ident| self.resolve_ctx.define_var(ident.name.clone()))
             .collect();
         let name = self.lower_ident(ast.name()).map(|ident| ident.name);
-        let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), args));
+        let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), params));
         let func = Func {
             fn_info,
             block: self.lower_expr(ast.block())

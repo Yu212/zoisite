@@ -3,6 +3,7 @@ use std::iter;
 use ecow::EcoString;
 
 use crate::scope::{FnId, Scope, VarId};
+use crate::type_checker::Type;
 
 pub struct ResolveContext {
     pub global_scope: Scope,
@@ -35,39 +36,46 @@ impl ResolveContext {
             name: name.clone(),
             id,
             place: scope.place,
+            ty: Type::Int,
         });
         scope.define_var(name, id);
         id
     }
-    pub fn define_fn(&mut self, name: EcoString, args: Vec<VarId>) -> FuncInfo {
+    pub fn define_fn(&mut self, name: EcoString, params: Vec<VarId>) -> FuncInfo {
         let idx = self.scope_stack.len() - 2;
         let scope = self.scope_stack.get_mut(idx).unwrap();
         let place = scope.place;
         let id = FnId(self.functions.len());
-        scope.define_fn(name.clone(), args.len(), id);
+        scope.define_fn(name.clone(), params.len(), id);
+        let param_ty = params.iter().map(|&var_id| self.get_var(var_id).ty).collect();
         let fun_info = FuncInfo {
             name,
             id,
-            args,
+            params,
             place,
+            param_ty,
+            return_ty: Type::Int,
         };
         self.functions.push(fun_info.clone());
         fun_info
     }
-    pub fn define_global_fn(&mut self, name: EcoString, args: Vec<EcoString>) -> FuncInfo {
+    pub fn define_global_fn(&mut self, name: EcoString, params: Vec<EcoString>) -> FuncInfo {
         self.push_scope(true);
-        let args: Vec<_> = args.iter()
+        let params: Vec<_> = params.iter()
             .map(|name| self.define_var(name.clone()))
             .collect();
         self.pop_scope();
         let place = self.global_scope.place;
         let id = FnId(self.functions.len());
-        self.global_scope.define_fn(name.clone(), args.len(), id);
+        self.global_scope.define_fn(name.clone(), params.len(), id);
+        let param_ty = params.iter().map(|&var_id| self.get_var(var_id).ty).collect();
         let fun_info = FuncInfo {
             name,
             id,
-            args,
+            params,
             place,
+            param_ty,
+            return_ty: Type::Int,
         };
         self.functions.push(fun_info.clone());
         fun_info
@@ -79,12 +87,12 @@ impl ResolveContext {
             .chain(iter::once(&self.global_scope))
             .find_map(|scope| scope.resolve_var(name))
     }
-    pub fn resolve_fn(&mut self, name: &EcoString, num_args: usize) -> Option<FnId> {
+    pub fn resolve_fn(&mut self, name: &EcoString, num_params: usize) -> Option<FnId> {
         let place = self.scope_stack.last_mut().unwrap().place;
         self.scope_stack.iter().rev()
             .filter(|scope| place == scope.place)
             .chain(iter::once(&self.global_scope))
-            .find_map(|scope| scope.resolve_fn(name, num_args))
+            .find_map(|scope| scope.resolve_fn(name, num_params))
     }
     pub fn push_scope(&mut self, update_place: bool) {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -110,14 +118,17 @@ pub struct VariableInfo {
     pub name: EcoString,
     pub id: VarId,
     pub place: Place,
+    pub ty: Type,
 }
 
 #[derive(Debug, Clone)]
 pub struct FuncInfo {
     pub name: EcoString,
     pub id: FnId,
-    pub args: Vec<VarId>,
+    pub params: Vec<VarId>,
     pub place: Place,
+    pub param_ty: Vec<Type>,
+    pub return_ty: Type,
 }
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]

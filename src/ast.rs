@@ -117,10 +117,10 @@ impl FuncDef {
             .find(|token| token.kind() == SyntaxKind::Ident)
     }
 
-    pub fn arg_list(&self) -> impl Iterator<Item = SyntaxToken> {
-        self.0.children().find(|node| node.kind() == SyntaxKind::ArgList)
+    pub fn param_list(&self) -> impl Iterator<Item = SyntaxToken> {
+        self.0.children().find(|node| node.kind() == SyntaxKind::ParamList)
             .into_iter()
-            .flat_map(|arg_list| arg_list.children_with_tokens())
+            .flat_map(|param_list| param_list.children_with_tokens())
             .filter_map(SyntaxElement::into_token)
             .filter(|token| token.kind() == SyntaxKind::Ident)
     }
