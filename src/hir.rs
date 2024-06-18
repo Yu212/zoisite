@@ -16,7 +16,7 @@ pub struct Root {
 #[derive(Debug, Clone)]
 pub struct Func {
     pub fn_info: Option<FuncInfo>,
-    pub block: Expr,
+    pub block: ExprIdx,
 }
 
 #[derive(Debug, Clone)]

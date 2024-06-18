@@ -50,7 +50,15 @@ impl TypeChecker {
             Stmt::WhileStmt { .. } => {}
             Stmt::BreakStmt { .. } => {}
             Stmt::ExprStmt { .. } => {}
-            Stmt::FuncDef { .. } => {}
+            Stmt::FuncDef { func } => {
+                let func = db.funcs[func].clone();
+                if let Some(func_info) = func.fn_info {
+                    let block_ty = self.expr_ty(db, func.block);
+                    if block_ty != func_info.return_ty {
+                        self.mismatched();
+                    }
+                }
+            }
         }
     }
 
@@ -91,9 +99,9 @@ impl TypeChecker {
             Expr::FnCall { fn_id, args } => {
                 if let Some(fn_id) = fn_id {
                     let func = db.resolve_ctx.get_fn(fn_id);
-                    for (&arg, &param_ty) in args.iter().zip(&func.param_ty) {
-                        let arg_ty = self.expr_ty(db, arg);
-                        if arg_ty != param_ty {
+                    for (&arg, &params_ty) in args.iter().zip(&func.params_ty) {
+                        let args_ty = self.expr_ty(db, arg);
+                        if args_ty != params_ty {
                             self.mismatched();
                         }
                     }

@@ -102,6 +102,7 @@ asts! {
     FnCallExpr;
     BlockExpr;
     Literal;
+    TypedIdent;
 }
 
 impl Root {
@@ -117,12 +118,18 @@ impl FuncDef {
             .find(|token| token.kind() == SyntaxKind::Ident)
     }
 
-    pub fn param_list(&self) -> impl Iterator<Item = SyntaxToken> {
-        self.0.children().find(|node| node.kind() == SyntaxKind::ParamList)
-            .into_iter()
-            .flat_map(|param_list| param_list.children_with_tokens())
+    pub fn param_list(&self) -> impl Iterator<Item = TypedIdent> {
+        self.0.children()
+            .filter(|node| node.kind() == SyntaxKind::ParamList)
+            .flat_map(|node| node.children())
+            .filter_map(TypedIdent::cast)
+    }
+
+    pub fn return_ty(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
             .filter_map(SyntaxElement::into_token)
             .filter(|token| token.kind() == SyntaxKind::Ident)
+            .nth(1)
     }
 
     pub fn block(&self) -> Option<Expr> {
@@ -132,9 +139,11 @@ impl FuncDef {
 
 impl LetStmt {
     pub fn name(&self) -> Option<SyntaxToken> {
-        self.0.children_with_tokens()
-            .filter_map(SyntaxElement::into_token)
-            .find(|token| token.kind() == SyntaxKind::Ident)
+        self.0.children().find_map(TypedIdent::cast).and_then(|typed_ident| typed_ident.ident())
+    }
+
+    pub fn ty(&self) -> Option<SyntaxToken> {
+        self.0.children().find_map(TypedIdent::cast).and_then(|typed_ident| typed_ident.ty())
     }
 
     pub fn expr(&self) -> Option<Expr> {
@@ -235,5 +244,20 @@ impl BlockExpr {
 impl Literal {
     pub fn parse(&self) -> Option<u64> {
         self.0.first_token()?.text().parse().ok()
+    }
+}
+
+impl TypedIdent {
+    pub fn ident(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Ident)
+    }
+
+    pub fn ty(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .filter(|token| token.kind() == SyntaxKind::Ident)
+            .nth(1)
     }
 }

@@ -146,8 +146,8 @@ impl<'ctx> Compiler<'ctx> {
     fn compile_func(&mut self, func: Func) {
         let i64_type = self.context.i64_type();
         if let Some(fn_info) = func.fn_info {
-            let param_type: Vec<_> = iter::repeat(i64_type.into()).take(fn_info.params.len()).collect();
-            let func_type = i64_type.fn_type(param_type.as_slice(), false);
+            let params_type: Vec<_> = iter::repeat(i64_type.into()).take(fn_info.params.len()).collect();
+            let func_type = i64_type.fn_type(params_type.as_slice(), false);
             let func_value = self.module.add_function(fn_info.name.as_str(), func_type, None);
             self.functions.insert(fn_info.id, func_value);
             self.cur_function = Some(func_value);
@@ -159,7 +159,7 @@ impl<'ctx> Compiler<'ctx> {
                 self.builder.build_store(addr, param.into_int_value()).ok().unwrap();
                 self.addresses.insert(var_id, addr);
             }
-            let ret = self.compile_expr(func.block).unwrap();
+            let ret = self.compile_expr(self.db.exprs[func.block].clone()).unwrap();
             self.builder.build_return(Some(&ret)).unwrap();
         }
     }

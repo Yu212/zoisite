@@ -30,17 +30,27 @@ pub fn func_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     p.expect(SyntaxKind::Ident);
     param_list(p);
+    p.expect(SyntaxKind::Colon);
+    p.expect(SyntaxKind::Ident);
     block_expr(p);
     m.complete(p, SyntaxKind::FuncDef)
+}
+
+pub fn typed_ident(p: &mut Parser<'_>) -> CompletedMarker {
+    let m = p.start();
+    p.expect(SyntaxKind::Ident);
+    p.expect(SyntaxKind::Colon);
+    p.expect(SyntaxKind::Ident);
+    m.complete(p, SyntaxKind::TypedIdent)
 }
 
 pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::OpenParen);
     if !p.at(SyntaxKind::CloseParen) {
-        p.expect(SyntaxKind::Ident);
+        typed_ident(p);
         while p.eat(SyntaxKind::Comma) {
-            p.expect(SyntaxKind::Ident);
+            typed_ident(p);
         }
     }
     p.expect(SyntaxKind::CloseParen);
@@ -51,7 +61,7 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::LetKw));
     let m = p.start();
     p.bump();
-    p.expect(SyntaxKind::Ident);
+    typed_ident(p);
     p.expect(SyntaxKind::Equals);
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);

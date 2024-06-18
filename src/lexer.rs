@@ -55,6 +55,7 @@ impl<'a> Lexer<'a> {
             Some('=') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::EqEq },
             Some('!') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Neq },
             Some(',') => SyntaxKind::Comma,
+            Some(':') => SyntaxKind::Colon,
             Some(';') => SyntaxKind::Semicolon,
             Some('=') => SyntaxKind::Equals,
             Some('+') => SyntaxKind::Plus,

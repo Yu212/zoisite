@@ -8,6 +8,7 @@ use crate::hir::{BinaryOp, Expr, Func, Identifier, Root, Stmt, UnaryOp};
 use crate::language::SyntaxToken;
 use crate::resolve_context::ResolveContext;
 use crate::syntax_kind::SyntaxKind;
+use crate::type_checker::Type;
 
 pub struct Database {
     pub exprs: Arena<Expr>,
@@ -41,16 +42,25 @@ impl Database {
     pub fn lower_func(&mut self, ast: ast::FuncDef) -> Stmt {
         self.resolve_ctx.push_scope(true);
         let params: Vec<_> = ast.param_list()
-            .flat_map(|token| self.lower_ident(Some(token)))
+            .flat_map(|param| self.lower_ident(param.ident()))
             .collect();
-        let params: Vec<_> = params.iter()
-            .map(|ident| self.resolve_ctx.define_var(ident.name.clone()))
+        let params_ty_ident: Vec<_> = ast.param_list()
+            .map(|param| self.lower_ident(param.ty()))
+            .collect();
+        let params_ty: Vec<_> = params_ty_ident.iter()
+            .map(|ident| ident.as_ref().map_or(Type::Invalid, |ident| self.resolve_ctx.resolve_ty(&ident.name)))
+            .collect();
+        let return_ty = self.lower_ident(ast.return_ty())
+            .map_or(Type::Invalid, |ident| self.resolve_ctx.resolve_ty(&ident.name));
+        let params: Vec<_> = params.iter().zip(params_ty)
+            .map(|(ident, ty)| self.resolve_ctx.define_var(ident.name.clone(), ty))
             .collect();
         let name = self.lower_ident(ast.name()).map(|ident| ident.name);
-        let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), params));
+        let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), params, return_ty));
+        let block = self.lower_expr(ast.block());
         let func = Func {
             fn_info,
-            block: self.lower_expr(ast.block())
+            block: self.exprs.alloc(block)
         };
         self.resolve_ctx.pop_scope();
         Stmt::FuncDef {
@@ -68,7 +78,14 @@ impl Database {
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
-        let var_id = self.lower_ident(ast.name()).map(|ident| self.resolve_ctx.define_var(ident.name.clone()));
+        let name = self.lower_ident(ast.name());
+        let ty = self.lower_ident(ast.ty());
+        let var_id = if let (Some(name), Some(ty)) = (name, ty) {
+            let ty_id = self.resolve_ctx.resolve_ty(&ty.name);
+            Some(self.resolve_ctx.define_var(name.name.clone(), ty_id))
+        } else {
+            None
+        };
         Stmt::LetStmt {
             var_id,
             expr: self.exprs.alloc(expr),
