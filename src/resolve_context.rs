@@ -82,6 +82,7 @@ impl ResolveContext {
     pub fn resolve_ty(&mut self, name: &EcoString) -> Type {
         match name.as_str() {
             "int" => Type::Int,
+            "bool" => Type::Bool,
             "unit" => Type::Unit,
             _ => Type::Invalid,
         }

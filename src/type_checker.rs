@@ -2,7 +2,7 @@ use la_arena::{ArenaMap, Idx};
 
 use crate::database::Database;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
-use crate::hir::{Expr, Stmt};
+use crate::hir::{BinaryOp, Expr, Stmt};
 
 type ExprIdx = Idx<Expr>;
 type StmtIdx = Idx<Stmt>;
@@ -69,13 +69,32 @@ impl TypeChecker {
         let expr = db.exprs[idx].clone();
         let ty = match expr {
             Expr::Missing => Type::Unit,
-            Expr::Binary { op: _, lhs, rhs } => {
-                let lhs_ty = self.expr_ty(db, lhs);
-                let rhs_ty = self.expr_ty(db, rhs);
-                if lhs_ty != rhs_ty {
-                    self.mismatched()
+            Expr::Binary { op, lhs, rhs } => {
+                if op == BinaryOp::Assign {
+                    let Expr::Ref { var_id } = db.exprs[lhs].clone() else { unreachable!() };
+                    if let Some(var_id) = var_id {
+                        let var = db.resolve_ctx.get_var(var_id);
+                        let rhs_ty = self.expr_ty(db, rhs);
+                        if var.ty != rhs_ty {
+                            self.mismatched()
+                        } else {
+                            Type::Unit
+                        }
+                    } else {
+                        Type::Unit
+                    }
                 } else {
-                    lhs_ty
+                    let lhs_ty = self.expr_ty(db, lhs);
+                    let rhs_ty = self.expr_ty(db, rhs);
+                    if lhs_ty != rhs_ty {
+                        self.mismatched()
+                    } else {
+                        match op {
+                            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => Type::Int,
+                            BinaryOp::EqEq | BinaryOp::Neq => Type::Bool,
+                            BinaryOp::Assign => unreachable!(),
+                        }
+                    }
                 }
             }
             Expr::Unary { op: _, expr } => self.expr_ty(db, expr),
@@ -87,7 +106,11 @@ impl TypeChecker {
                     Type::Unit
                 }
             }
-            Expr::If { cond: _, then_expr, else_expr } => {
+            Expr::If { cond, then_expr, else_expr } => {
+                let cond_ty = self.expr_ty(db, cond);
+                if cond_ty != Type::Bool {
+                    self.mismatched();
+                }
                 let then_ty = self.expr_ty(db, then_expr);
                 let else_ty = else_expr.map_or(Type::Unit, |expr| self.expr_ty(db, expr));
                 if then_ty != else_ty {
@@ -132,5 +155,6 @@ impl TypeChecker {
 pub enum Type {
     Unit,
     Int,
+    Bool,
     Invalid,
 }
