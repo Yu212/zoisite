@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn let_stmt() {
-        insta::assert_debug_snapshot!(parse("let a = 1;"));
+        insta::assert_debug_snapshot!(parse("let a: int = 1;"));
     }
 
     #[test]

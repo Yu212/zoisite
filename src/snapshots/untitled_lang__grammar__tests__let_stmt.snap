@@ -1,19 +1,23 @@
 ---
 source: src/grammar.rs
-expression: "parse(\"let a = 1;\")"
+expression: "parse(\"let a: int = 1;\")"
 ---
 (
-    Root@0..10
-      LetStmt@0..10
+    Root@0..15
+      LetStmt@0..15
         LetKw@0..3 "let"
         Whitespace@3..4 " "
-        Ident@4..5 "a"
-        Whitespace@5..6 " "
-        Equals@6..7 "="
-        Whitespace@7..8 " "
-        Literal@8..9
-          Number@8..9 "1"
-        Semicolon@9..10 ";"
+        TypedIdent@4..11
+          Ident@4..5 "a"
+          Colon@5..6 ":"
+          Whitespace@6..7 " "
+          Ident@7..10 "int"
+          Whitespace@10..11 " "
+        Equals@11..12 "="
+        Whitespace@12..13 " "
+        Literal@13..14
+          Number@13..14 "1"
+        Semicolon@14..15 ";"
     ,
     [],
 )
