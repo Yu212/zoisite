@@ -227,6 +227,11 @@ mod tests {
     }
 
     #[test]
+    fn func_def() {
+        insta::assert_debug_snapshot!(parse("fun f(n: int): int { 1; }"));
+    }
+
+    #[test]
     fn let_stmt() {
         insta::assert_debug_snapshot!(parse("let a: int = 1;"));
     }
