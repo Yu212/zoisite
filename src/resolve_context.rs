@@ -95,9 +95,7 @@ impl ResolveContext {
             .find_map(|scope| scope.resolve_var(name))
     }
     pub fn resolve_fn(&mut self, name: &EcoString, num_params: usize) -> Option<FnId> {
-        let place = self.scope_stack.last_mut().unwrap().place;
         self.scope_stack.iter().rev()
-            .filter(|scope| place == scope.place)
             .chain(iter::once(&self.global_scope))
             .find_map(|scope| scope.resolve_fn(name, num_params))
     }
