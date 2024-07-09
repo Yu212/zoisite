@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::mem;
+use std::ops::Index;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -62,12 +63,12 @@ pub fn compile(text: &str) {
     let (syntax, parser_errors) = parser.parse();
     eprintln!("lexer errors: ");
     for err in &lexer_errors {
-        eprintln!("{:?}", err);
+        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
     eprintln!();
     eprintln!("parser errors: ");
     for err in &parser_errors {
-        eprintln!("{:?}", err);
+        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
     eprintln!();
     eprintln!("tree: ");
@@ -79,7 +80,7 @@ pub fn compile(text: &str) {
     eprintln!();
     eprintln!("lower errors: ");
     for err in &lower_errors {
-        eprintln!("{:?}", err);
+        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
     eprintln!();
     eprintln!("hir: ");
@@ -92,7 +93,7 @@ pub fn compile(text: &str) {
     eprintln!();
     eprintln!("type check errors: ");
     for err in &type_check_errors {
-        eprintln!("{:?}", err);
+        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
     if !type_check_errors.is_empty() {
         return;
