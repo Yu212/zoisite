@@ -69,6 +69,9 @@ pub enum Expr {
     Literal {
         n: Option<u64>,
     },
+    BoolLiteral {
+        val: bool,
+    },
 }
 
 #[derive(Debug)]

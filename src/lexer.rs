@@ -95,6 +95,8 @@ impl<'a> Lexer<'a> {
             "while" => SyntaxKind::WhileKw,
             "break" => SyntaxKind::BreakKw,
             "fun" => SyntaxKind::FunKw,
+            "true" => SyntaxKind::TrueKw,
+            "false" => SyntaxKind::FalseKw,
             _ => SyntaxKind::Ident,
         }
     }
@@ -133,7 +135,7 @@ mod tests {
 
     #[test]
     fn ketword() {
-        insta::assert_debug_snapshot!(tokenize("let if else while break"));
+        insta::assert_debug_snapshot!(tokenize("let if else while break fun true false"));
     }
 
     #[test]

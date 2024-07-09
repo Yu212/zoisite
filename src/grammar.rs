@@ -4,6 +4,7 @@ use crate::syntax_kind::SyntaxKind;
 use crate::token_set::TokenSet;
 
 const RECOVERY_SET: TokenSet = TokenSet::new(&[SyntaxKind::Semicolon]);
+const BOOL_SET: TokenSet = TokenSet::new(&[SyntaxKind::TrueKw, SyntaxKind::FalseKw]);
 
 pub fn root(p: &mut Parser<'_>) {
     let m = p.start();
@@ -124,6 +125,7 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
 pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     match p.current() {
         SyntaxKind::Number => Some(number(p)),
+        SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some(bool(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
         SyntaxKind::OpenBrace => Some(block_expr(p)),
@@ -205,6 +207,13 @@ pub fn number(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::Literal)
+}
+
+pub fn bool(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at_set(&BOOL_SET));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::BoolLiteral)
 }
 
 #[cfg(test)]

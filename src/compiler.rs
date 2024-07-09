@@ -249,6 +249,10 @@ impl<'ctx> Compiler<'ctx> {
                 let i64_type = self.context.i64_type();
                 Some(i64_type.const_int(n?, false))
             },
+            Expr::BoolLiteral { val } => {
+                let i64_type = self.context.i64_type();
+                Some(i64_type.const_int(val as u64, false))
+            },
         }
     }
 }

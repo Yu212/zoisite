@@ -125,6 +125,7 @@ impl Database {
             Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
+            Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             None => Expr::Missing,
         }
     }
@@ -214,6 +215,12 @@ impl Database {
         }
         Expr::Literal {
             n: parsed,
+        }
+    }
+    pub fn lower_bool_literal(&mut self, ast: ast::BoolLiteral) -> Expr {
+        let parsed = ast.parse();
+        Expr::BoolLiteral {
+            val: parsed,
         }
     }
     pub fn lower_ident(&mut self, ast: Option<SyntaxToken>) -> Option<Identifier> {
