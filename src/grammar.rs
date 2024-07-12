@@ -75,6 +75,7 @@ pub fn while_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     expr(p, 0);
     block_expr(p);
+    p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::WhileStmt)
 }
 
