@@ -1,3 +1,5 @@
+use inkwell::context::Context;
+use inkwell::types::BasicTypeEnum;
 use la_arena::{ArenaMap, Idx};
 
 use crate::database::Database;
@@ -158,4 +160,15 @@ pub enum Type {
     Int,
     Bool,
     Invalid,
+}
+
+impl Type {
+    pub fn llvm_ty<'ctx>(&self, ctx: &'ctx Context) -> Option<BasicTypeEnum<'ctx>> {
+        match self {
+            Type::Unit => Some(ctx.i8_type().into()),
+            Type::Int => Some(ctx.i64_type().into()),
+            Type::Bool => Some(ctx.bool_type().into()),
+            Type::Invalid => None,
+        }
+    }
 }
