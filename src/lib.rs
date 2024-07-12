@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::io::Write;
 use std::mem;
 use std::ops::Index;
 use std::path::PathBuf;
@@ -65,24 +66,20 @@ pub fn compile(text: &str) {
     for err in &lexer_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
-    eprintln!();
     eprintln!("parser errors: ");
     for err in &parser_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
-    eprintln!();
-    eprintln!("tree: ");
-    eprintln!("{:#?}", syntax);
+    let mut syntax_file = File::create("./files/output.syntax").unwrap();
+    syntax_file.write_all(format!("{:#?}", syntax).as_bytes()).unwrap();
     let root = Root::cast(syntax).unwrap();
     let mut db = Database::new();
     let hir = db.lower_root(root);
     let lower_errors = mem::take(&mut db.diagnostics);
-    eprintln!();
     eprintln!("lower errors: ");
     for err in &lower_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
     }
-    eprintln!();
     eprintln!("hir: ");
     eprintln!("{:?}", hir);
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
@@ -90,7 +87,6 @@ pub fn compile(text: &str) {
     }
     let type_checker = TypeChecker::new();
     let type_check_errors = type_checker.check(&db);
-    eprintln!();
     eprintln!("type check errors: ");
     for err in &type_check_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
@@ -101,9 +97,6 @@ pub fn compile(text: &str) {
     let context = Context::create();
     let compiler = Compiler::new(&context, db, "main");
     let module = compiler.compile(&hir);
-    eprintln!();
-    eprintln!("llvm ir:");
-    module.print_to_stderr();
     module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
     optimize(&module);
     module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
