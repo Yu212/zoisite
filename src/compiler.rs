@@ -168,14 +168,14 @@ impl<'ctx> Compiler<'ctx> {
     fn compile_expr(&mut self, expr: Expr) -> Option<BasicValueEnum<'ctx>> {
         match expr {
             Expr::Missing => None,
-            Expr::Binary { op: BinaryOp::Assign, lhs, rhs } => {
-                let Expr::Ref { var_id } = self.db.exprs[lhs].clone() else { unreachable!() };
-                let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
-                let ptr = self.addresses[&var_id?];
-                self.builder.build_store(ptr, rhs_value).ok()?;
-                return Some(rhs_value);
-            }
             Expr::Binary { op, lhs, rhs } => {
+                if let BinaryOp::Assign = op {
+                    let Expr::Ref { var_id } = self.db.exprs[lhs].clone() else { unreachable!() };
+                    let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
+                    let ptr = self.addresses[&var_id?];
+                    self.builder.build_store(ptr, rhs_value).ok()?;
+                    return Some(rhs_value);
+                }
                 let lhs_value = self.compile_expr(self.db.exprs[lhs].clone())?.into_int_value();
                 let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?.into_int_value();
                 let int_ret = match op {
