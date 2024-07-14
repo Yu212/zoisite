@@ -100,6 +100,7 @@ asts! {
         BlockExpr,
         NumberLiteral,
         BoolLiteral,
+        ArrayLiteral,
     ];
     BinaryExpr;
     PrefixExpr;
@@ -110,6 +111,7 @@ asts! {
     BlockExpr;
     NumberLiteral;
     BoolLiteral;
+    ArrayLiteral;
     TypedIdent;
 }
 
@@ -278,6 +280,16 @@ impl BoolLiteral {
             "false" => false,
             _ => unreachable!(),
         }
+    }
+}
+
+impl ArrayLiteral {
+    pub fn len(&self) -> Option<u64> {
+        self.0.children().filter_map(NumberLiteral::cast).last().and_then(|literal| literal.parse())
+    }
+
+    pub fn initial(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
     }
 }
 

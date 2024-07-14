@@ -47,7 +47,7 @@ impl ResolveContext {
         let place = scope.place;
         let id = FnId(self.functions.len());
         scope.define_fn(name.clone(), params.len(), id);
-        let params_ty = params.iter().map(|&var_id| self.get_var(var_id).ty).collect();
+        let params_ty = params.iter().map(|&var_id| self.get_var(var_id).ty.clone()).collect();
         let fun_info = FuncInfo {
             name,
             id,

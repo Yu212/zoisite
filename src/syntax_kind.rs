@@ -40,6 +40,7 @@ pub enum SyntaxKind {
     ParamList,
     NumberLiteral,
     BoolLiteral,
+    ArrayLiteral,
     BinaryExpr,
     PrefixExpr,
     ParenExpr,

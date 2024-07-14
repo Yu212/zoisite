@@ -156,6 +156,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     match p.current() {
         SyntaxKind::Number => Some(number_literal(p)),
         SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some(bool_literal(p)),
+        SyntaxKind::OpenBracket => Some(array_literal(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
         SyntaxKind::OpenBrace => Some(block_expr(p)),
@@ -244,6 +245,17 @@ pub fn bool_literal(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::BoolLiteral)
+}
+
+pub fn array_literal(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::OpenBracket));
+    let m = p.start();
+    p.bump();
+    expr(p, 0);
+    p.expect(SyntaxKind::Semicolon);
+    number_literal(p);
+    p.expect(SyntaxKind::CloseBracket);
+    m.complete(p, SyntaxKind::ArrayLiteral)
 }
 
 #[cfg(test)]

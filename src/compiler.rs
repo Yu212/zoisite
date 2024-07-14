@@ -158,7 +158,7 @@ impl<'ctx> Compiler<'ctx> {
             for (param, var_id) in func_value.get_param_iter().zip(fn_info.params) {
                 let var_name = &self.db.resolve_ctx.get_var(var_id).name;
                 let addr = self.builder.build_alloca(param.get_type(), var_name.as_str()).ok().unwrap();
-                self.builder.build_store(addr, param.into_int_value()).ok().unwrap();
+                self.builder.build_store(addr, param).ok().unwrap();
                 self.addresses.insert(var_id, addr);
             }
             let ret = self.compile_expr(self.db.exprs[func.block].clone()).unwrap();
@@ -254,6 +254,39 @@ impl<'ctx> Compiler<'ctx> {
             Expr::BoolLiteral { val } => {
                 let bool_type = self.context.bool_type();
                 Some(bool_type.const_int(val as u64, false).into())
+            },
+            Expr::ArrayLiteral { len, initial } => {
+                let i64_type = self.context.i64_type();
+                let len_val = i64_type.const_int(len?, false);
+                let initial_val = self.compile_expr(self.db.exprs[initial].clone())?;
+                let array = self.builder.build_array_malloc(initial_val.get_type(), len_val, "array").ok()?;
+
+                let cur_func = self.cur_function.unwrap();
+                let cond_block = self.context.append_basic_block(cur_func, "loopcond");
+                let loop_block = self.context.append_basic_block(cur_func, "loop");
+                let after_block = self.context.append_basic_block(cur_func, "after");
+
+                let idx_addr = self.builder.build_alloca(i64_type, "idx").ok()?;
+                self.builder.build_store(idx_addr, i64_type.const_int(0, false)).ok()?;
+                self.builder.build_unconditional_branch(cond_block).ok()?;
+
+                self.builder.position_at_end(cond_block);
+                let idx_val = self.builder.build_load(i64_type, idx_addr, "idx").ok()?.into_int_value();
+                let cond_val = self.builder.build_int_compare(IntPredicate::SLT, idx_val, len_val, "cmp").ok()?;
+                self.builder.build_conditional_branch(cond_val, loop_block, after_block).ok()?;
+
+                self.builder.position_at_end(loop_block);
+                unsafe {
+                    let val = self.builder.build_in_bounds_gep(initial_val.get_type(), array, &[idx_val], "tmp").ok()?;
+                    self.builder.build_store(val, initial_val).ok()?;
+                };
+                let new_idx_val = self.builder.build_int_add(idx_val, i64_type.const_int(1, false), "add").ok()?;
+                self.builder.build_store(idx_addr, new_idx_val).ok()?;
+                self.builder.build_unconditional_branch(cond_block).ok()?;
+
+                self.builder.position_at_end(after_block);
+
+                Some(array.into())
             },
         }
     }

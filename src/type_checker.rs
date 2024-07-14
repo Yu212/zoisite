@@ -64,8 +64,8 @@ impl TypeChecker {
     }
 
     pub fn expr_ty(&mut self, db: &Database, idx: ExprIdx) -> Type {
-        if let Some(&ty) = self.ty_map.get(idx) {
-            return ty;
+        if let Some(ty) = self.ty_map.get(idx) {
+            return ty.clone();
         }
         let expr = db.exprs[idx].clone();
         let ty = match expr {
@@ -123,13 +123,13 @@ impl TypeChecker {
             Expr::FnCall { fn_id, args } => {
                 if let Some(fn_id) = fn_id {
                     let func = db.resolve_ctx.get_fn(fn_id);
-                    for (&arg, &params_ty) in args.iter().zip(&func.params_ty) {
+                    for (&arg, params_ty) in args.iter().zip(&func.params_ty) {
                         let args_ty = self.expr_ty(db, arg);
-                        if args_ty != params_ty {
+                        if args_ty != *params_ty {
                             self.mismatched();
                         }
                     }
-                    func.return_ty
+                    func.return_ty.clone()
                 } else {
                     Type::Unit
                 }
@@ -147,8 +147,9 @@ impl TypeChecker {
             },
             Expr::NumberLiteral { n: _ } => Type::Int,
             Expr::BoolLiteral { val: _ } => Type::Bool,
+            Expr::ArrayLiteral { len, initial } => len.map_or(Type::Invalid, |len| Type::Array(len, Box::new(self.expr_ty(db, initial)))),
         };
-        self.ty_map.insert(idx, ty);
+        self.ty_map.insert(idx, ty.clone());
         ty
     }
 }

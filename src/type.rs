@@ -1,11 +1,12 @@
 use inkwell::context::Context;
-use inkwell::types::BasicTypeEnum;
+use inkwell::types::{BasicType, BasicTypeEnum};
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Type {
     Unit,
     Int,
     Bool,
+    Array(u64, Box<Type>),
     Invalid,
 }
 
@@ -15,6 +16,7 @@ impl Type {
             Type::Unit => Some(ctx.i8_type().into()),
             Type::Int => Some(ctx.i64_type().into()),
             Type::Bool => Some(ctx.bool_type().into()),
+            Type::Array(len, inner_ty) => Some(inner_ty.llvm_ty(ctx)?.array_type(*len as u32).into()),
             Type::Invalid => None,
         }
     }

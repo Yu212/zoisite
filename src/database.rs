@@ -136,7 +136,7 @@ impl Database {
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
             return Type::Invalid;
         }
-        unimplemented!()
+        Type::Array(len.unwrap(), Box::new(inner_ty))
     }
     pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> Expr {
         match ast {
@@ -149,6 +149,7 @@ impl Database {
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::NumberLiteral(ast)) => self.lower_number_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
+            Some(ast::Expr::ArrayLiteral(ast)) => self.lower_array_literal(ast),
             None => Expr::Missing,
         }
     }
@@ -244,6 +245,18 @@ impl Database {
         let parsed = ast.parse();
         Expr::BoolLiteral {
             val: parsed,
+        }
+    }
+    pub fn lower_array_literal(&mut self, ast: ast::ArrayLiteral) -> Expr {
+        let len = ast.len();
+        if len.is_none() {
+            let range = ast.syntax().first_token().unwrap().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
+        }
+        let initial = self.lower_expr(ast.initial());
+        Expr::ArrayLiteral {
+            len,
+            initial: self.exprs.alloc(initial),
         }
     }
     pub fn lower_ident(&mut self, ast: Option<SyntaxToken>) -> Option<Identifier> {

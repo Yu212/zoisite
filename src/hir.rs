@@ -72,6 +72,10 @@ pub enum Expr {
     BoolLiteral {
         val: bool,
     },
+    ArrayLiteral {
+        len: Option<u64>,
+        initial: ExprIdx,
+    },
 }
 
 #[derive(Debug)]
