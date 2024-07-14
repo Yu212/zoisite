@@ -92,7 +92,7 @@ asts! {
         IfExpr,
         FnCallExpr,
         BlockExpr,
-        Literal,
+        NumberLiteral,
         BoolLiteral,
     ];
     BinaryExpr;
@@ -102,7 +102,7 @@ asts! {
     IfExpr;
     FnCallExpr;
     BlockExpr;
-    Literal;
+    NumberLiteral;
     BoolLiteral;
     TypedIdent;
 }
@@ -243,7 +243,7 @@ impl BlockExpr {
     }
 }
 
-impl Literal {
+impl NumberLiteral {
     pub fn parse(&self) -> Option<u64> {
         self.0.first_token()?.text().parse().ok()
     }

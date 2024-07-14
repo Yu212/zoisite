@@ -124,7 +124,7 @@ impl Database {
             Some(ast::Expr::IfExpr(ast)) => self.lower_if_expr(ast),
             Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
-            Some(ast::Expr::Literal(ast)) => self.lower_literal(ast),
+            Some(ast::Expr::NumberLiteral(ast)) => self.lower_number_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             None => Expr::Missing,
         }
@@ -207,13 +207,13 @@ impl Database {
             stmts,
         }
     }
-    pub fn lower_literal(&mut self, ast: ast::Literal) -> Expr {
+    pub fn lower_number_literal(&mut self, ast: ast::NumberLiteral) -> Expr {
         let parsed = ast.parse();
         if parsed.is_none() {
             let range = ast.syntax().first_token().unwrap().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
         }
-        Expr::Literal {
+        Expr::NumberLiteral {
             n: parsed,
         }
     }

@@ -33,7 +33,7 @@ pub enum SyntaxKind {
     Root,
     FuncDef,
     ParamList,
-    Literal,
+    NumberLiteral,
     BoolLiteral,
     BinaryExpr,
     PrefixExpr,

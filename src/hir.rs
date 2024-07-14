@@ -66,7 +66,7 @@ pub enum Expr {
     Block {
         stmts: Vec<StmtIdx>,
     },
-    Literal {
+    NumberLiteral {
         n: Option<u64>,
     },
     BoolLiteral {

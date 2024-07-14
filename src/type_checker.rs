@@ -146,7 +146,7 @@ impl TypeChecker {
                     Type::Unit
                 }
             },
-            Expr::Literal { n: _ } => Type::Int,
+            Expr::NumberLiteral { n: _ } => Type::Int,
             Expr::BoolLiteral { val: _ } => Type::Bool,
         };
         self.ty_map.insert(idx, ty);

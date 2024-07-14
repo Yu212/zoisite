@@ -15,7 +15,7 @@ expression: "parse(\"let a: int = 1;\")"
           Whitespace@10..11 " "
         Equals@11..12 "="
         Whitespace@12..13 " "
-        Literal@13..14
+        NumberLiteral@13..14
           Number@13..14 "1"
         Semicolon@14..15 ";"
     ,
