@@ -26,6 +26,7 @@ pub enum DiagnosticKind {
     },
     UndeclaredVariable,
     UndeclaredFunction,
+    InvalidType,
     InvalidLhs,
     BreakOutsideLoop,
     TypeUnmatched,

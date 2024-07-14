@@ -65,6 +65,8 @@ impl<'a> Lexer<'a> {
             Some('%') => SyntaxKind::Percent,
             Some('(') => SyntaxKind::OpenParen,
             Some(')') => SyntaxKind::CloseParen,
+            Some('[') => SyntaxKind::OpenBracket,
+            Some(']') => SyntaxKind::CloseBracket,
             Some('{') => SyntaxKind::OpenBrace,
             Some('}') => SyntaxKind::CloseBrace,
             None => SyntaxKind::Eof,

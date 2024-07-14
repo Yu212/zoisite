@@ -14,12 +14,14 @@ expression: "parse(\"fun f(n: int): int { 1; }\")"
             Ident@6..7 "n"
             Colon@7..8 ":"
             Whitespace@8..9 " "
-            Ident@9..12 "int"
+            IdentTypeSpec@9..12
+              Ident@9..12 "int"
           CloseParen@12..13 ")"
         Colon@13..14 ":"
         Whitespace@14..15 " "
-        Ident@15..18 "int"
-        Whitespace@18..19 " "
+        IdentTypeSpec@15..19
+          Ident@15..18 "int"
+          Whitespace@18..19 " "
         BlockExpr@19..25
           OpenBrace@19..20 "{"
           Whitespace@20..21 " "

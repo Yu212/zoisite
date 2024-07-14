@@ -32,41 +32,9 @@ pub fn func_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     p.expect(SyntaxKind::Ident);
     param_list(p);
     p.expect(SyntaxKind::Colon);
-    p.expect(SyntaxKind::Ident);
+    type_spec(p);
     block_expr(p);
     m.complete(p, SyntaxKind::FuncDef)
-}
-
-pub fn typed_ident(p: &mut Parser<'_>) -> CompletedMarker {
-    let m = p.start();
-    p.expect(SyntaxKind::Ident);
-    p.expect(SyntaxKind::Colon);
-    p.expect(SyntaxKind::Ident);
-    m.complete(p, SyntaxKind::TypedIdent)
-}
-
-pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
-    let m = p.start();
-    p.expect(SyntaxKind::OpenParen);
-    if !p.at(SyntaxKind::CloseParen) {
-        typed_ident(p);
-        while p.eat(SyntaxKind::Comma) {
-            typed_ident(p);
-        }
-    }
-    p.expect(SyntaxKind::CloseParen);
-    m.complete(p, SyntaxKind::ParamList)
-}
-
-pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
-    assert!(p.at(SyntaxKind::LetKw));
-    let m = p.start();
-    p.bump();
-    typed_ident(p);
-    p.expect(SyntaxKind::Equals);
-    expr(p, 0);
-    p.expect(SyntaxKind::Semicolon);
-    m.complete(p, SyntaxKind::LetStmt)
 }
 
 pub fn while_stmt(p: &mut Parser<'_>) -> CompletedMarker {
@@ -92,6 +60,67 @@ pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::ExprStmt)
+}
+
+pub fn typed_ident(p: &mut Parser<'_>) -> CompletedMarker {
+    let m = p.start();
+    p.expect(SyntaxKind::Ident);
+    p.expect(SyntaxKind::Colon);
+    type_spec(p);
+    m.complete(p, SyntaxKind::TypedIdent)
+}
+
+pub fn type_spec(p: &mut Parser<'_>) -> Option<CompletedMarker> {
+    match p.current() {
+        SyntaxKind::OpenBracket => Some(array_type_spec(p)),
+        SyntaxKind::Ident => Some(ident_type_spec(p)),
+        _ => {
+            p.error_and_recover(&[SyntaxKind::OpenBracket, SyntaxKind::Ident], &RECOVERY_SET);
+            None
+        }
+    }
+}
+
+pub fn ident_type_spec(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::Ident));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::IdentTypeSpec)
+}
+
+pub fn array_type_spec(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::OpenBracket));
+    let m = p.start();
+    p.bump();
+    type_spec(p);
+    p.expect(SyntaxKind::Semicolon);
+    number_literal(p);
+    p.expect(SyntaxKind::CloseBracket);
+    m.complete(p, SyntaxKind::ArrayTypeSpec)
+}
+
+pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
+    let m = p.start();
+    p.expect(SyntaxKind::OpenParen);
+    if !p.at(SyntaxKind::CloseParen) {
+        typed_ident(p);
+        while p.eat(SyntaxKind::Comma) {
+            typed_ident(p);
+        }
+    }
+    p.expect(SyntaxKind::CloseParen);
+    m.complete(p, SyntaxKind::ParamList)
+}
+
+pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::LetKw));
+    let m = p.start();
+    p.bump();
+    typed_ident(p);
+    p.expect(SyntaxKind::Equals);
+    expr(p, 0);
+    p.expect(SyntaxKind::Semicolon);
+    m.complete(p, SyntaxKind::LetStmt)
 }
 
 pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker> {

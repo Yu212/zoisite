@@ -11,8 +11,9 @@ expression: "parse(\"let a: int = 1;\")"
           Ident@4..5 "a"
           Colon@5..6 ":"
           Whitespace@6..7 " "
-          Ident@7..10 "int"
-          Whitespace@10..11 " "
+          IdentTypeSpec@7..11
+            Ident@7..10 "int"
+            Whitespace@10..11 " "
         Equals@11..12 "="
         Whitespace@12..13 " "
         NumberLiteral@13..14

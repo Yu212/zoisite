@@ -1,10 +1,9 @@
-use inkwell::context::Context;
-use inkwell::types::BasicTypeEnum;
 use la_arena::{ArenaMap, Idx};
 
 use crate::database::Database;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
 use crate::hir::{BinaryOp, Expr, Stmt};
+use crate::r#type::Type;
 
 type ExprIdx = Idx<Expr>;
 type StmtIdx = Idx<Stmt>;
@@ -151,24 +150,5 @@ impl TypeChecker {
         };
         self.ty_map.insert(idx, ty);
         ty
-    }
-}
-
-#[derive(PartialEq, Copy, Clone, Debug)]
-pub enum Type {
-    Unit,
-    Int,
-    Bool,
-    Invalid,
-}
-
-impl Type {
-    pub fn llvm_ty<'ctx>(&self, ctx: &'ctx Context) -> Option<BasicTypeEnum<'ctx>> {
-        match self {
-            Type::Unit => Some(ctx.i8_type().into()),
-            Type::Int => Some(ctx.i64_type().into()),
-            Type::Bool => Some(ctx.bool_type().into()),
-            Type::Invalid => None,
-        }
     }
 }

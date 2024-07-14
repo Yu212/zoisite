@@ -2,8 +2,8 @@ use std::iter;
 
 use ecow::EcoString;
 
+use crate::r#type::Type;
 use crate::scope::{FnId, Scope, VarId};
-use crate::type_checker::Type;
 
 pub struct ResolveContext {
     pub global_scope: Scope,

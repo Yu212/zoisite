@@ -3,12 +3,13 @@ use la_arena::Arena;
 use rowan::ast::AstNode;
 
 use crate::ast;
+use crate::ast::TypeSpec;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
 use crate::hir::{BinaryOp, Expr, Func, Identifier, Root, Stmt, UnaryOp};
 use crate::language::SyntaxToken;
+use crate::r#type::Type;
 use crate::resolve_context::ResolveContext;
 use crate::syntax_kind::SyntaxKind;
-use crate::type_checker::Type;
 
 pub struct Database {
     pub exprs: Arena<Expr>,
@@ -44,14 +45,10 @@ impl Database {
         let params: Vec<_> = ast.param_list()
             .flat_map(|param| self.lower_ident(param.ident()))
             .collect();
-        let params_ty_ident: Vec<_> = ast.param_list()
-            .map(|param| self.lower_ident(param.ty()))
+        let params_ty: Vec<_> = ast.param_list()
+            .map(|param| self.lower_type(param.type_spec()))
             .collect();
-        let params_ty: Vec<_> = params_ty_ident.iter()
-            .map(|ident| ident.as_ref().map_or(Type::Invalid, |ident| self.resolve_ctx.resolve_ty(&ident.name)))
-            .collect();
-        let return_ty = self.lower_ident(ast.return_ty())
-            .map_or(Type::Invalid, |ident| self.resolve_ctx.resolve_ty(&ident.name));
+        let return_ty = self.lower_type(ast.return_ty());
         let params: Vec<_> = params.iter().zip(params_ty)
             .map(|(ident, ty)| self.resolve_ctx.define_var(ident.name.clone(), ty))
             .collect();
@@ -79,10 +76,9 @@ impl Database {
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
         let name = self.lower_ident(ast.name());
-        let ty = self.lower_ident(ast.ty());
-        let var_id = if let (Some(name), Some(ty)) = (name, ty) {
-            let ty_id = self.resolve_ctx.resolve_ty(&ty.name);
-            Some(self.resolve_ctx.define_var(name.name.clone(), ty_id))
+        let ty = self.lower_type(ast.type_spec());
+        let var_id = if let Some(name) = name {
+            Some(self.resolve_ctx.define_var(name.name.clone(), ty))
         } else {
             None
         };
@@ -114,6 +110,33 @@ impl Database {
         Stmt::ExprStmt {
             expr: self.exprs.alloc(expr),
         }
+    }
+    pub fn lower_type(&mut self, ast: Option<TypeSpec>) -> Type {
+        match ast {
+            Some(ast::TypeSpec::IdentTypeSpec(ast)) => self.lower_ident_type(ast),
+            Some(ast::TypeSpec::ArrayTypeSpec(ast)) => self.lower_array_type(ast),
+            None => Type::Invalid,
+        }
+    }
+    pub fn lower_ident_type(&mut self, ast: ast::IdentTypeSpec) -> Type {
+        let name = self.lower_ident(ast.ident()).map(|ident| ident.name);
+        if let Some(name) = name {
+            self.resolve_ctx.resolve_ty(&name)
+        } else {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidType, Some(range)));
+            Type::Invalid
+        }
+    }
+    pub fn lower_array_type(&mut self, ast: ast::ArrayTypeSpec) -> Type {
+        let inner_ty = self.lower_type(ast.inner_ty());
+        let len = ast.len();
+        if len.is_none() {
+            let range = ast.syntax().first_token().unwrap().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
+            return Type::Invalid;
+        }
+        unimplemented!()
     }
     pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> Expr {
         match ast {

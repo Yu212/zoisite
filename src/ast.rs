@@ -84,6 +84,12 @@ asts! {
     WhileStmt;
     BreakStmt;
     ExprStmt;
+    TypeSpec [
+        IdentTypeSpec,
+        ArrayTypeSpec,
+    ];
+    IdentTypeSpec;
+    ArrayTypeSpec;
     Expr [
         BinaryExpr,
         PrefixExpr,
@@ -127,11 +133,8 @@ impl FuncDef {
             .filter_map(TypedIdent::cast)
     }
 
-    pub fn return_ty(&self) -> Option<SyntaxToken> {
-        self.0.children_with_tokens()
-            .filter_map(SyntaxElement::into_token)
-            .filter(|token| token.kind() == SyntaxKind::Ident)
-            .nth(1)
+    pub fn return_ty(&self) -> Option<TypeSpec> {
+        self.0.children().find_map(TypeSpec::cast)
     }
 
     pub fn block(&self) -> Option<Expr> {
@@ -144,8 +147,9 @@ impl LetStmt {
         self.0.children().find_map(TypedIdent::cast).and_then(|typed_ident| typed_ident.ident())
     }
 
-    pub fn ty(&self) -> Option<SyntaxToken> {
-        self.0.children().find_map(TypedIdent::cast).and_then(|typed_ident| typed_ident.ty())
+    pub fn type_spec(&self) -> Option<TypeSpec> {
+        self.0.children().find_map(TypedIdent::cast)
+            .and_then(|typed_ident| typed_ident.type_spec())
     }
 
     pub fn expr(&self) -> Option<Expr> {
@@ -166,6 +170,24 @@ impl WhileStmt {
 impl ExprStmt {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl IdentTypeSpec {
+    pub fn ident(&self) -> Option<SyntaxToken> {
+        self.0.children_with_tokens()
+            .filter_map(SyntaxElement::into_token)
+            .find(|token| token.kind() == SyntaxKind::Ident)
+    }
+}
+
+impl ArrayTypeSpec {
+    pub fn inner_ty(&self) -> Option<TypeSpec> {
+        self.0.children().find_map(TypeSpec::cast)
+    }
+
+    pub fn len(&self) -> Option<u64> {
+        self.0.children().find_map(NumberLiteral::cast).and_then(|literal| literal.parse())
     }
 }
 
@@ -266,10 +288,7 @@ impl TypedIdent {
             .find(|token| token.kind() == SyntaxKind::Ident)
     }
 
-    pub fn ty(&self) -> Option<SyntaxToken> {
-        self.0.children_with_tokens()
-            .filter_map(SyntaxElement::into_token)
-            .filter(|token| token.kind() == SyntaxKind::Ident)
-            .nth(1)
+    pub fn type_spec(&self) -> Option<TypeSpec> {
+        self.0.children().find_map(TypeSpec::cast)
     }
 }

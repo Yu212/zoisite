@@ -35,6 +35,7 @@ pub mod token_set;
 pub mod resolve_context;
 pub mod scope;
 pub mod type_checker;
+pub mod r#type;
 
 pub fn compile_no_output(text: &str) {
     let lexer = Lexer::new(text);
@@ -89,7 +90,7 @@ pub fn compile(text: &str) {
     let type_check_errors = type_checker.check(&db);
     eprintln!("type check errors: ");
     for err in &type_check_errors {
-        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
+        eprintln!("{:?}", err);
     }
     if !type_check_errors.is_empty() {
         return;
