@@ -164,7 +164,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::Ident => Some(ref_expr(p)),
         SyntaxKind::IfKw => Some(if_expr(p)),
         _ => {
-            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident], &RECOVERY_SET);
+            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
             None
         }
     }
