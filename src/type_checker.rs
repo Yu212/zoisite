@@ -71,30 +71,15 @@ impl TypeChecker {
         let ty = match expr {
             Expr::Missing => Type::Unit,
             Expr::Binary { op, lhs, rhs } => {
-                if op == BinaryOp::Assign {
-                    let Expr::Ref { var_id } = db.exprs[lhs].clone() else { unreachable!() };
-                    if let Some(var_id) = var_id {
-                        let var = db.resolve_ctx.get_var(var_id);
-                        let rhs_ty = self.expr_ty(db, rhs);
-                        if var.ty != rhs_ty {
-                            self.mismatched()
-                        } else {
-                            Type::Unit
-                        }
-                    } else {
-                        Type::Unit
-                    }
+                let lhs_ty = self.expr_ty(db, lhs);
+                let rhs_ty = self.expr_ty(db, rhs);
+                if lhs_ty != rhs_ty {
+                    self.mismatched()
                 } else {
-                    let lhs_ty = self.expr_ty(db, lhs);
-                    let rhs_ty = self.expr_ty(db, rhs);
-                    if lhs_ty != rhs_ty {
-                        self.mismatched()
-                    } else {
-                        match op {
-                            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => Type::Int,
-                            BinaryOp::EqEq | BinaryOp::Neq => Type::Bool,
-                            BinaryOp::Assign => unreachable!(),
-                        }
+                    match op {
+                        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => Type::Int,
+                        BinaryOp::EqEq | BinaryOp::Neq => Type::Bool,
+                        BinaryOp::Assign => rhs_ty,
                     }
                 }
             }

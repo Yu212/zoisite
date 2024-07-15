@@ -171,14 +171,35 @@ impl<'ctx> Compiler<'ctx> {
             self.builder.build_return(Some(&ret)).unwrap();
         }
     }
+    fn compile_lvalue(&mut self, expr: Expr) -> Option<PointerValue<'ctx>> {
+        match expr {
+            Expr::Ref { var_id } => {
+                Some(self.addresses[&var_id?])
+            },
+            Expr::Index { main_expr, index_expr } => {
+                let main_ty = &self.ty_map[main_expr];
+                if let Type::Array(_, inner_ty) = main_ty {
+                    let main_ty = main_ty.llvm_ty(self.context).unwrap();
+                    let inner_ty = inner_ty.llvm_ty(self.context).unwrap();
+                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
+                    let main_val = self.builder.build_load(main_ty, lvalue, "tmp").ok()?.into_pointer_value();
+                    let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
+                    let ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
+                    Some(ptr)
+                } else {
+                    unreachable!()
+                }
+            },
+            _ => unreachable!()
+        }
+    }
     fn compile_expr(&mut self, expr: Expr) -> Option<BasicValueEnum<'ctx>> {
         match expr {
             Expr::Missing => None,
             Expr::Binary { op, lhs, rhs } => {
                 if let BinaryOp::Assign = op {
-                    let Expr::Ref { var_id } = self.db.exprs[lhs].clone() else { unreachable!() };
+                    let ptr = self.compile_lvalue(self.db.exprs[lhs].clone())?;
                     let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
-                    let ptr = self.addresses[&var_id?];
                     self.builder.build_store(ptr, rhs_value).ok()?;
                     return Some(rhs_value);
                 }

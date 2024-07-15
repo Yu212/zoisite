@@ -152,6 +152,13 @@ impl Database {
             None => Expr::Missing,
         }
     }
+    pub fn is_lvalue(&self, expr: &Expr) -> bool {
+        match expr {
+            Expr::Ref { var_id: _ } => true,
+            Expr::Index { main_expr, index_expr: _ } => self.is_lvalue(&self.exprs[*main_expr]),
+            _ => false,
+        }
+    }
     pub fn lower_binary_expr(&mut self, ast: ast::BinaryExpr) -> Expr {
         let op = match ast.op().unwrap().kind() {
             SyntaxKind::Plus => BinaryOp::Add,
@@ -166,8 +173,7 @@ impl Database {
         };
         let lhs = self.lower_expr(ast.lhs());
         let rhs = self.lower_expr(ast.rhs());
-        if let Expr::Ref { var_id: _ } = lhs {
-        } else if op == BinaryOp::Assign {
+        if op == BinaryOp::Assign && !self.is_lvalue(&lhs) {
             let range = ast.syntax().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidLhs, Some(range)));
         }
