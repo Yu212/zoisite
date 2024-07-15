@@ -67,6 +67,8 @@ macro_rules! ast {
                 }
             }
         }
+
+        $(ast!($item);)*
     };
 }
 
@@ -79,17 +81,10 @@ asts! {
         ExprStmt,
         FuncDef,
     ];
-    FuncDef;
-    LetStmt;
-    WhileStmt;
-    BreakStmt;
-    ExprStmt;
     TypeSpec [
         IdentTypeSpec,
         ArrayTypeSpec,
     ];
-    IdentTypeSpec;
-    ArrayTypeSpec;
     Expr [
         BinaryExpr,
         PrefixExpr,
@@ -103,17 +98,6 @@ asts! {
         BoolLiteral,
         ArrayLiteral,
     ];
-    BinaryExpr;
-    PrefixExpr;
-    ParenExpr;
-    RefExpr;
-    IfExpr;
-    FnCallExpr;
-    IndexExpr;
-    BlockExpr;
-    NumberLiteral;
-    BoolLiteral;
-    ArrayLiteral;
     TypedIdent;
 }
 
