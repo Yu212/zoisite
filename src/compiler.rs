@@ -296,7 +296,7 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::ArrayLiteral { len, initial } => {
                 let i64_type = self.context.i64_type();
-                let len_val = i64_type.const_int(len?, false);
+                let len_val = self.compile_expr(self.db.exprs[len].clone())?.into_int_value();
                 let initial_val = self.compile_expr(self.db.exprs[initial].clone())?;
                 let array = self.builder.build_array_malloc(initial_val.get_type(), len_val, "array").ok()?;
 

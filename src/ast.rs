@@ -292,8 +292,8 @@ impl BoolLiteral {
 }
 
 impl ArrayLiteral {
-    pub fn len(&self) -> Option<NumberLiteral> {
-        self.0.children().filter_map(NumberLiteral::cast).last()
+    pub fn len(&self) -> Option<Expr> {
+        self.0.children().filter_map(Expr::cast).nth(1)
     }
 
     pub fn initial(&self) -> Option<Expr> {

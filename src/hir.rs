@@ -77,7 +77,7 @@ pub enum Expr {
         val: bool,
     },
     ArrayLiteral {
-        len: Option<u64>,
+        len: ExprIdx,
         initial: ExprIdx,
     },
 }

@@ -257,13 +257,10 @@ impl Database {
         }
     }
     pub fn lower_array_literal(&mut self, ast: ast::ArrayLiteral) -> Expr {
-        let len = match ast.len().map(|literal| self.lower_number_literal(literal)) {
-            Some(Expr::NumberLiteral { n: Some(n) }) => Some(n),
-            _ => None,
-        };
+        let len = self.lower_expr(ast.len());
         let initial = self.lower_expr(ast.initial());
         Expr::ArrayLiteral {
-            len,
+            len: self.exprs.alloc(len),
             initial: self.exprs.alloc(initial),
         }
     }

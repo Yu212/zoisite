@@ -244,11 +244,7 @@ pub fn array_literal(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
-    if p.at(SyntaxKind::Number) {
-        number_literal(p);
-    } else {
-        p.error(&[SyntaxKind::Number]);
-    }
+    expr(p, 0);
     p.expect(SyntaxKind::CloseBracket);
     m.complete(p, SyntaxKind::ArrayLiteral)
 }
