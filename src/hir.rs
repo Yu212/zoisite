@@ -63,6 +63,10 @@ pub enum Expr {
         fn_id: Option<FnId>,
         args: Vec<ExprIdx>,
     },
+    Index {
+        main_expr: ExprIdx,
+        index_expr: ExprIdx,
+    },
     Block {
         stmts: Vec<StmtIdx>,
     },
@@ -83,6 +87,30 @@ pub struct Identifier {
     pub name: EcoString,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OpKind {
+    BinaryOp(BinaryOp),
+    UnaryOp(UnaryOp),
+    PostfixOp(PostfixOp),
+}
+
+impl OpKind {
+    pub fn binding_power(&self) -> (i8, i8) {
+        match self {
+            OpKind::BinaryOp(BinaryOp::Add) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Sub) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Mul) => (7, 8),
+            OpKind::BinaryOp(BinaryOp::Div) => (7, 8),
+            OpKind::BinaryOp(BinaryOp::Rem) => (7, 8),
+            OpKind::BinaryOp(BinaryOp::Assign) => (2, 1),
+            OpKind::BinaryOp(BinaryOp::EqEq) => (3, 4),
+            OpKind::BinaryOp(BinaryOp::Neq) => (3, 4),
+            OpKind::PostfixOp(PostfixOp::Index) => (10, -1),
+            OpKind::UnaryOp(UnaryOp::Neg) => (-1, 9),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BinaryOp {
     Add,
@@ -95,30 +123,12 @@ pub enum BinaryOp {
     Neq,
 }
 
-impl BinaryOp {
-    pub fn binding_power(&self) -> (u8, u8) {
-        match self {
-            BinaryOp::Add => (5, 6),
-            BinaryOp::Sub => (5, 6),
-            BinaryOp::Mul => (7, 8),
-            BinaryOp::Div => (7, 8),
-            BinaryOp::Rem => (7, 8),
-            BinaryOp::Assign => (2, 1),
-            BinaryOp::EqEq => (3, 4),
-            BinaryOp::Neq => (3, 4),
-        }
-    }
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum PostfixOp {
+    Index,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum UnaryOp {
     Neg,
-}
-
-impl UnaryOp {
-    pub fn binding_power(&self) -> ((), u8) {
-        match self {
-            UnaryOp::Neg => ((), 9),
-        }
-    }
 }

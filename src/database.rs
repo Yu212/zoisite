@@ -146,6 +146,7 @@ impl Database {
             Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
             Some(ast::Expr::IfExpr(ast)) => self.lower_if_expr(ast),
             Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
+            Some(ast::Expr::IndexExpr(ast)) => self.lower_index_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::NumberLiteral(ast)) => self.lower_number_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
@@ -218,6 +219,14 @@ impl Database {
         Expr::FnCall {
             fn_id,
             args,
+        }
+    }
+    pub fn lower_index_expr(&mut self, ast: ast::IndexExpr) -> Expr {
+        let main_expr = self.lower_expr(ast.main());
+        let index_expr = self.lower_expr(ast.index());
+        Expr::Index {
+            main_expr: self.exprs.alloc(main_expr),
+            index_expr: self.exprs.alloc(index_expr),
         }
     }
     pub fn lower_block_expr(&mut self, ast: ast::BlockExpr) -> Expr {

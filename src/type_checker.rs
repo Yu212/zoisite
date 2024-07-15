@@ -21,14 +21,14 @@ impl TypeChecker {
         }
     }
 
-    pub fn check(mut self, db: &Database) -> Vec<Diagnostic> {
+    pub fn check(mut self, db: &Database) -> (ArenaMap<ExprIdx, Type>, Vec<Diagnostic>) {
         for (idx, _) in db.exprs.iter() {
             self.expr_ty(db, idx.clone());
         }
         for (idx, _) in db.stmts.iter() {
             self.check_stmt(db, idx.clone());
         }
-        self.diagnostics
+        (self.ty_map, self.diagnostics)
     }
 
     fn mismatched(&mut self) -> Type {
@@ -132,6 +132,18 @@ impl TypeChecker {
                     func.return_ty.clone()
                 } else {
                     Type::Unit
+                }
+            },
+            Expr::Index { main_expr, index_expr } => {
+                let main_ty = self.expr_ty(db, main_expr);
+                let index_ty = self.expr_ty(db, index_expr);
+                if index_ty != Type::Int {
+                    self.mismatched();
+                }
+                if let Type::Array(_, inner_ty) = main_ty {
+                    *inner_ty
+                } else {
+                    self.mismatched()
                 }
             },
             Expr::Block { stmts } => {

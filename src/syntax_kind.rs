@@ -47,6 +47,7 @@ pub enum SyntaxKind {
     RefExpr,
     IfExpr,
     FnCallExpr,
+    IndexExpr,
     BlockExpr,
     Stmt,
     LetStmt,

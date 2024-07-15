@@ -49,8 +49,13 @@ pub fn compile_no_output(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
+    let type_checker = TypeChecker::new();
+    let (ty_map, type_check_errors) = type_checker.check(&db);
+    if !type_check_errors.is_empty() {
+        return;
+    }
     let context = Context::create();
-    let compiler = Compiler::new(&context, db, "main");
+    let compiler = Compiler::new(&context, db, ty_map, "main");
     let module = compiler.compile(&hir);
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
     unsafe {
@@ -87,7 +92,7 @@ pub fn compile(text: &str) {
         return;
     }
     let type_checker = TypeChecker::new();
-    let type_check_errors = type_checker.check(&db);
+    let (ty_map, type_check_errors) = type_checker.check(&db);
     eprintln!("type check errors: ");
     for err in &type_check_errors {
         eprintln!("{:?}", err);
@@ -96,7 +101,7 @@ pub fn compile(text: &str) {
         return;
     }
     let context = Context::create();
-    let compiler = Compiler::new(&context, db, "main");
+    let compiler = Compiler::new(&context, db, ty_map, "main");
     let module = compiler.compile(&hir);
     module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
     optimize(&module);

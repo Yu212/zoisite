@@ -1,3 +1,4 @@
+use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{BasicType, BasicTypeEnum};
 
@@ -16,7 +17,7 @@ impl Type {
             Type::Unit => Some(ctx.i8_type().into()),
             Type::Int => Some(ctx.i64_type().into()),
             Type::Bool => Some(ctx.bool_type().into()),
-            Type::Array(len, inner_ty) => Some(inner_ty.llvm_ty(ctx)?.array_type(*len as u32).into()),
+            Type::Array(len, inner_ty) => Some(inner_ty.llvm_ty(ctx)?.array_type(*len as u32).ptr_type(AddressSpace::default()).into()),
             Type::Invalid => None,
         }
     }

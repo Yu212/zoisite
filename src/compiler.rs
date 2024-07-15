@@ -7,10 +7,14 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::BasicType;
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
+use la_arena::{ArenaMap, Idx};
 
 use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, Func, Root, Stmt, UnaryOp};
+use crate::r#type::Type;
 use crate::scope::{FnId, VarId};
+
+type ExprIdx = Idx<Expr>;
 
 pub struct Compiler<'ctx> {
     pub db: Database,
@@ -21,10 +25,11 @@ pub struct Compiler<'ctx> {
     pub functions: HashMap<FnId, FunctionValue<'ctx>>,
     pub cur_function: Option<FunctionValue<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>,
+    pub ty_map: ArenaMap<ExprIdx, Type>,
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn new(context: &'ctx Context, db: Database, module_name: &str) -> Self {
+    pub fn new(context: &'ctx Context, db: Database, ty_map: ArenaMap<ExprIdx, Type>, module_name: &str) -> Self {
         let module = context.create_module(module_name);
         let builder = context.create_builder();
         Self {
@@ -36,6 +41,7 @@ impl<'ctx> Compiler<'ctx> {
             functions: HashMap::new(),
             cur_function: None,
             loop_stack: Vec::new(),
+            ty_map,
         }
     }
     pub fn compile(mut self, root: &Root) -> Module<'ctx> {
@@ -242,6 +248,18 @@ impl<'ctx> Compiler<'ctx> {
                 let call_site = self.builder.build_call(function, &*args, "tmp").ok()?;
                 let ret_val = call_site.try_as_basic_value().left()?;
                 Some(ret_val)
+            },
+            Expr::Index { main_expr, index_expr } => {
+                let main_ty = &self.ty_map[main_expr];
+                if let Type::Array(_, inner_ty) = main_ty {
+                    let inner_ty = inner_ty.llvm_ty(self.context).unwrap();
+                    let main_val = self.compile_expr(self.db.exprs[main_expr].clone())?.into_pointer_value();
+                    let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
+                    let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
+                    Some(self.builder.build_load(inner_ty, val_ptr, "tmp").ok()?.into())
+                } else {
+                    unreachable!()
+                }
             },
             Expr::Block { stmts } => {
                 let i8_type = self.context.i8_type();

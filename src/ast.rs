@@ -97,6 +97,7 @@ asts! {
         RefExpr,
         IfExpr,
         FnCallExpr,
+        IndexExpr,
         BlockExpr,
         NumberLiteral,
         BoolLiteral,
@@ -108,6 +109,7 @@ asts! {
     RefExpr;
     IfExpr;
     FnCallExpr;
+    IndexExpr;
     BlockExpr;
     NumberLiteral;
     BoolLiteral;
@@ -258,6 +260,16 @@ impl FnCallExpr {
 
     pub fn args(&self) -> impl Iterator<Item = Expr> {
         self.0.children().filter_map(Expr::cast)
+    }
+}
+
+impl IndexExpr {
+    pub fn main(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
+    }
+
+    pub fn index(&self) -> Option<Expr> {
+        self.0.children().filter_map(Expr::cast).nth(1)
     }
 }
 

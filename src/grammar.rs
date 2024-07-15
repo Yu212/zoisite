@@ -1,4 +1,4 @@
-use crate::hir::{BinaryOp, UnaryOp};
+use crate::hir::{BinaryOp, OpKind, PostfixOp, UnaryOp};
 use crate::parser::{CompletedMarker, Parser};
 use crate::syntax_kind::SyntaxKind;
 use crate::token_set::TokenSet;
@@ -123,18 +123,19 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::LetStmt)
 }
 
-pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker> {
+pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<CompletedMarker> {
     let mut lhs = lhs(p)?;
     loop {
-        let op = match p.current() {
-            SyntaxKind::Plus => BinaryOp::Add,
-            SyntaxKind::Minus => BinaryOp::Sub,
-            SyntaxKind::Star => BinaryOp::Mul,
-            SyntaxKind::Slash => BinaryOp::Div,
-            SyntaxKind::Percent => BinaryOp::Rem,
-            SyntaxKind::Equals => BinaryOp::Assign,
-            SyntaxKind::EqEq => BinaryOp::EqEq,
-            SyntaxKind::Neq => BinaryOp::Neq,
+        let op: OpKind = match p.current() {
+            SyntaxKind::Plus => OpKind::BinaryOp(BinaryOp::Add),
+            SyntaxKind::Minus => OpKind::BinaryOp(BinaryOp::Sub),
+            SyntaxKind::Star => OpKind::BinaryOp(BinaryOp::Mul),
+            SyntaxKind::Slash => OpKind::BinaryOp(BinaryOp::Div),
+            SyntaxKind::Percent => OpKind::BinaryOp(BinaryOp::Rem),
+            SyntaxKind::Equals => OpKind::BinaryOp(BinaryOp::Assign),
+            SyntaxKind::EqEq => OpKind::BinaryOp(BinaryOp::EqEq),
+            SyntaxKind::Neq => OpKind::BinaryOp(BinaryOp::Neq),
+            SyntaxKind::OpenBracket => OpKind::PostfixOp(PostfixOp::Index),
             _ => break,
         };
         let (left_binding_power, right_binding_power) = op.binding_power();
@@ -143,10 +144,16 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: u8) -> Option<CompletedMarker
         }
         p.bump();
         let m = lhs.precede(p);
-        let rhs = expr(p, right_binding_power);
-        lhs = m.complete(p, SyntaxKind::BinaryExpr);
-        if rhs.is_none() {
-            break;
+        if matches!(op, OpKind::PostfixOp(PostfixOp::Index)) {
+            expr(p, 0);
+            p.expect(SyntaxKind::CloseBracket);
+            lhs = m.complete(p, SyntaxKind::IndexExpr);
+        } else {
+            let rhs = expr(p, right_binding_power);
+            lhs = m.complete(p, SyntaxKind::BinaryExpr);
+            if rhs.is_none() {
+                break;
+            }
         }
     }
     Some(lhs)
@@ -174,8 +181,8 @@ pub fn prefix_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::Minus));
     let m = p.start();
     p.bump();
-    let op = UnaryOp::Neg;
-    let ((), right_binding_power) = op.binding_power();
+    let op = OpKind::UnaryOp(UnaryOp::Neg);
+    let (_, right_binding_power) = op.binding_power();
     expr(p, right_binding_power);
     m.complete(p, SyntaxKind::PrefixExpr)
 }
