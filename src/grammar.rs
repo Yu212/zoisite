@@ -70,37 +70,17 @@ pub fn typed_ident(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::TypedIdent)
 }
 
-pub fn type_spec(p: &mut Parser<'_>) -> Option<CompletedMarker> {
-    match p.current() {
-        SyntaxKind::OpenBracket => Some(array_type_spec(p)),
-        SyntaxKind::Ident => Some(ident_type_spec(p)),
-        _ => {
-            p.error_and_recover(&[SyntaxKind::OpenBracket, SyntaxKind::Ident], &RECOVERY_SET);
-            None
-        }
-    }
-}
-
-pub fn ident_type_spec(p: &mut Parser<'_>) -> CompletedMarker {
-    assert!(p.at(SyntaxKind::Ident));
+pub fn type_spec(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
-    p.bump();
-    m.complete(p, SyntaxKind::IdentTypeSpec)
-}
-
-pub fn array_type_spec(p: &mut Parser<'_>) -> CompletedMarker {
-    assert!(p.at(SyntaxKind::OpenBracket));
-    let m = p.start();
-    p.bump();
-    type_spec(p);
-    p.expect(SyntaxKind::Semicolon);
-    if p.at(SyntaxKind::Number) {
-        number_literal(p);
-    } else {
-        p.error(&[SyntaxKind::Number]);
+    p.expect(SyntaxKind::Ident);
+    let mut c = m.complete(p, SyntaxKind::IdentTypeSpec);
+    while p.at(SyntaxKind::OpenBracket) {
+        let m = c.precede(p);
+        p.bump();
+        p.expect(SyntaxKind::CloseBracket);
+        c = m.complete(p, SyntaxKind::ArrayTypeSpec);
     }
-    p.expect(SyntaxKind::CloseBracket);
-    m.complete(p, SyntaxKind::ArrayTypeSpec)
+    c
 }
 
 pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {

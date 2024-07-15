@@ -189,10 +189,6 @@ impl ArrayTypeSpec {
     pub fn inner_ty(&self) -> Option<TypeSpec> {
         self.0.children().find_map(TypeSpec::cast)
     }
-
-    pub fn len(&self) -> Option<NumberLiteral> {
-        self.0.children().find_map(NumberLiteral::cast)
-    }
 }
 
 impl BinaryExpr {

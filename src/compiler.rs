@@ -178,7 +178,7 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::Index { main_expr, index_expr } => {
                 let main_ty = &self.ty_map[main_expr];
-                if let Type::Array(_, inner_ty) = main_ty {
+                if let Type::Array(inner_ty) = main_ty {
                     let main_ty = main_ty.llvm_ty(self.context).unwrap();
                     let inner_ty = inner_ty.llvm_ty(self.context).unwrap();
                     let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
@@ -272,7 +272,7 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::Index { main_expr, index_expr } => {
                 let main_ty = &self.ty_map[main_expr];
-                if let Type::Array(_, inner_ty) = main_ty {
+                if let Type::Array(inner_ty) = main_ty {
                     let inner_ty = inner_ty.llvm_ty(self.context).unwrap();
                     let main_val = self.compile_expr(self.db.exprs[main_expr].clone())?.into_pointer_value();
                     let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();

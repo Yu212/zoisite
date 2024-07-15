@@ -125,7 +125,7 @@ impl TypeChecker {
                 if index_ty != Type::Int {
                     self.mismatched();
                 }
-                if let Type::Array(_, inner_ty) = main_ty {
+                if let Type::Array(inner_ty) = main_ty {
                     *inner_ty
                 } else {
                     self.mismatched()
@@ -144,7 +144,7 @@ impl TypeChecker {
             },
             Expr::NumberLiteral { n: _ } => Type::Int,
             Expr::BoolLiteral { val: _ } => Type::Bool,
-            Expr::ArrayLiteral { len, initial } => len.map_or(Type::Invalid, |len| Type::Array(len, Box::new(self.expr_ty(db, initial)))),
+            Expr::ArrayLiteral { len: _, initial } => Type::Array(Box::new(self.expr_ty(db, initial))),
         };
         self.ty_map.insert(idx, ty.clone());
         ty
