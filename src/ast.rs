@@ -190,8 +190,8 @@ impl ArrayTypeSpec {
         self.0.children().find_map(TypeSpec::cast)
     }
 
-    pub fn len(&self) -> Option<u64> {
-        self.0.children().find_map(NumberLiteral::cast).and_then(|literal| literal.parse())
+    pub fn len(&self) -> Option<NumberLiteral> {
+        self.0.children().find_map(NumberLiteral::cast)
     }
 }
 
@@ -296,8 +296,8 @@ impl BoolLiteral {
 }
 
 impl ArrayLiteral {
-    pub fn len(&self) -> Option<u64> {
-        self.0.children().filter_map(NumberLiteral::cast).last().and_then(|literal| literal.parse())
+    pub fn len(&self) -> Option<NumberLiteral> {
+        self.0.children().filter_map(NumberLiteral::cast).last()
     }
 
     pub fn initial(&self) -> Option<Expr> {

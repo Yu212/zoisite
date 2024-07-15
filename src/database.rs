@@ -130,13 +130,11 @@ impl Database {
     }
     pub fn lower_array_type(&mut self, ast: ast::ArrayTypeSpec) -> Type {
         let inner_ty = self.lower_type(ast.inner_ty());
-        let len = ast.len();
-        if len.is_none() {
-            let range = ast.syntax().first_token().unwrap().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
-            return Type::Invalid;
-        }
-        Type::Array(len.unwrap(), Box::new(inner_ty))
+        let len = match ast.len().map(|literal| self.lower_number_literal(literal)) {
+            Some(Expr::NumberLiteral { n: Some(n) }) => n,
+            _ => return Type::Invalid,
+        };
+        Type::Array(len, Box::new(inner_ty))
     }
     pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> Expr {
         match ast {
@@ -257,11 +255,10 @@ impl Database {
         }
     }
     pub fn lower_array_literal(&mut self, ast: ast::ArrayLiteral) -> Expr {
-        let len = ast.len();
-        if len.is_none() {
-            let range = ast.syntax().first_token().unwrap().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
-        }
+        let len = match ast.len().map(|literal| self.lower_number_literal(literal)) {
+            Some(Expr::NumberLiteral { n: Some(n) }) => Some(n),
+            _ => None,
+        };
         let initial = self.lower_expr(ast.initial());
         Expr::ArrayLiteral {
             len,

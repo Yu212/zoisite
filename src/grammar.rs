@@ -94,7 +94,11 @@ pub fn array_type_spec(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     type_spec(p);
     p.expect(SyntaxKind::Semicolon);
-    number_literal(p);
+    if p.at(SyntaxKind::Number) {
+        number_literal(p);
+    } else {
+        p.error(&[SyntaxKind::Number]);
+    }
     p.expect(SyntaxKind::CloseBracket);
     m.complete(p, SyntaxKind::ArrayTypeSpec)
 }
@@ -260,7 +264,11 @@ pub fn array_literal(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
-    number_literal(p);
+    if p.at(SyntaxKind::Number) {
+        number_literal(p);
+    } else {
+        p.error(&[SyntaxKind::Number]);
+    }
     p.expect(SyntaxKind::CloseBracket);
     m.complete(p, SyntaxKind::ArrayLiteral)
 }
