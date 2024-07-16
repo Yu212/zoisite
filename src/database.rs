@@ -144,6 +144,7 @@ impl Database {
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::NumberLiteral(ast)) => self.lower_number_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
+            Some(ast::Expr::StringLiteral(ast)) => self.lower_string_literal(ast),
             Some(ast::Expr::ArrayLiteral(ast)) => self.lower_array_literal(ast),
             None => Expr::Missing,
         }
@@ -254,6 +255,11 @@ impl Database {
         let parsed = ast.parse();
         Expr::BoolLiteral {
             val: parsed,
+        }
+    }
+    pub fn lower_string_literal(&mut self, ast: ast::StringLiteral) -> Expr {
+        Expr::StringLiteral {
+            val: ast.parse(),
         }
     }
     pub fn lower_array_literal(&mut self, ast: ast::ArrayLiteral) -> Expr {

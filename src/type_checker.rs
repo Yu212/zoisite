@@ -144,6 +144,7 @@ impl TypeChecker {
             },
             Expr::NumberLiteral { n: _ } => Type::Int,
             Expr::BoolLiteral { val: _ } => Type::Bool,
+            Expr::StringLiteral { val: _ } => Type::Str,
             Expr::ArrayLiteral { len, initial } => {
                 let len_ty = self.expr_ty(db, len);
                 let initial_ty = self.expr_ty(db, initial);

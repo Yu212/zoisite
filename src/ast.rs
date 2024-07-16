@@ -1,3 +1,4 @@
+use ecow::EcoString;
 use rowan::ast::AstNode;
 use rowan::SyntaxElement;
 
@@ -96,6 +97,7 @@ asts! {
         BlockExpr,
         NumberLiteral,
         BoolLiteral,
+        StringLiteral,
         ArrayLiteral,
     ];
     TypedIdent;
@@ -272,6 +274,14 @@ impl BoolLiteral {
             "false" => false,
             _ => unreachable!(),
         }
+    }
+}
+
+impl StringLiteral {
+    pub fn parse(&self) -> Option<EcoString> {
+        let token = self.0.first_token()?;
+        let text = token.text();
+        Some(EcoString::from(&text[1..text.len()-1]))
     }
 }
 

@@ -147,6 +147,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     match p.current() {
         SyntaxKind::Number => Some(number_literal(p)),
         SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some(bool_literal(p)),
+        SyntaxKind::String => Some(string_literal(p)),
         SyntaxKind::OpenBracket => Some(array_literal(p)),
         SyntaxKind::Minus => Some(prefix_expr(p)),
         SyntaxKind::OpenParen => Some(paren_expr(p)),
@@ -155,7 +156,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::Ident => Some(ref_expr(p)),
         SyntaxKind::IfKw => Some(if_expr(p)),
         _ => {
-            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
+            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::String, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
             None
         }
     }
@@ -229,6 +230,13 @@ pub fn number_literal(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::NumberLiteral)
+}
+
+pub fn string_literal(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::String));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::StringLiteral)
 }
 
 pub fn bool_literal(p: &mut Parser<'_>) -> CompletedMarker {

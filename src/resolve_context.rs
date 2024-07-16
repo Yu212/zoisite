@@ -83,6 +83,7 @@ impl ResolveContext {
         match name.as_str() {
             "int" => Type::Int,
             "bool" => Type::Bool,
+            "str" => Type::Str,
             "unit" => Type::Unit,
             _ => Type::Invalid,
         }

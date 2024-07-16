@@ -19,6 +19,7 @@ impl Diagnostic {
 #[derive(Debug)]
 pub enum DiagnosticKind {
     NumberTooLarge,
+    UnterminatedStringLiteral,
     UnexpectedCharacter,
     UnexpectedToken {
         expected: Vec<SyntaxKind>,

@@ -76,6 +76,9 @@ pub enum Expr {
     BoolLiteral {
         val: bool,
     },
+    StringLiteral {
+        val: Option<EcoString>,
+    },
     ArrayLiteral {
         len: ExprIdx,
         initial: ExprIdx,

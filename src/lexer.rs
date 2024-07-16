@@ -55,6 +55,7 @@ impl<'a> Lexer<'a> {
             Some('=') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::EqEq },
             Some('!') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Neq },
             Some('/') if self.s.peek() == Some('/') => self.line_comment(),
+            Some('"') => self.string_literal(),
             Some(',') => SyntaxKind::Comma,
             Some(':') => SyntaxKind::Colon,
             Some(';') => SyntaxKind::Semicolon,
@@ -91,6 +92,15 @@ impl<'a> Lexer<'a> {
     fn line_comment(&mut self) -> SyntaxKind {
         self.s.eat_while(|c| c != '\n');
         SyntaxKind::LineComment
+    }
+
+    fn string_literal(&mut self) -> SyntaxKind {
+        self.s.eat_while(|c| c != '"' && c != '\n');
+        if self.s.eat_if('"') {
+            SyntaxKind::String
+        } else {
+            self.error(DiagnosticKind::UnterminatedStringLiteral)
+        }
     }
 
     fn ident(&mut self, start: usize) -> SyntaxKind {

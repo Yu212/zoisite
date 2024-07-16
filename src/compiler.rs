@@ -294,6 +294,10 @@ impl<'ctx> Compiler<'ctx> {
                 let bool_type = self.context.bool_type();
                 Some(bool_type.const_int(val as u64, false).into())
             },
+            Expr::StringLiteral { val } => {
+                let str = self.context.const_string(val?.as_bytes(), true);
+                Some(str.into())
+            },
             Expr::ArrayLiteral { len, initial } => {
                 let i64_type = self.context.i64_type();
                 let len_val = self.compile_expr(self.db.exprs[len].clone())?.into_int_value();
