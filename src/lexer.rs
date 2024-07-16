@@ -54,6 +54,7 @@ impl<'a> Lexer<'a> {
             Some(c) if Self::is_ident_start(c) => self.ident(start),
             Some('=') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::EqEq },
             Some('!') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Neq },
+            Some('/') if self.s.peek() == Some('/') => self.line_comment(),
             Some(',') => SyntaxKind::Comma,
             Some(':') => SyntaxKind::Colon,
             Some(';') => SyntaxKind::Semicolon,
@@ -85,6 +86,11 @@ impl<'a> Lexer<'a> {
     fn whitespace(&mut self) -> SyntaxKind {
         self.s.eat_while(char::is_ascii_whitespace);
         SyntaxKind::Whitespace
+    }
+
+    fn line_comment(&mut self) -> SyntaxKind {
+        self.s.eat_while(|c| c != '\n');
+        SyntaxKind::LineComment
     }
 
     fn ident(&mut self, start: usize) -> SyntaxKind {
