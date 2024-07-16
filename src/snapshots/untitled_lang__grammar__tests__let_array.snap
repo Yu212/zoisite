@@ -1,0 +1,44 @@
+---
+source: src/grammar.rs
+expression: "parse(\"let a: int[][] = [[1; 2]; 3];\")"
+---
+(
+    Root@0..29
+      LetStmt@0..29
+        LetKw@0..3 "let"
+        Whitespace@3..4 " "
+        TypedIdent@4..15
+          Ident@4..5 "a"
+          Colon@5..6 ":"
+          Whitespace@6..7 " "
+          ArrayTypeSpec@7..15
+            ArrayTypeSpec@7..12
+              IdentTypeSpec@7..10
+                Ident@7..10 "int"
+              OpenBracket@10..11 "["
+              CloseBracket@11..12 "]"
+            OpenBracket@12..13 "["
+            CloseBracket@13..14 "]"
+            Whitespace@14..15 " "
+        Equals@15..16 "="
+        Whitespace@16..17 " "
+        ArrayLiteral@17..28
+          OpenBracket@17..18 "["
+          ArrayLiteral@18..24
+            OpenBracket@18..19 "["
+            NumberLiteral@19..20
+              Number@19..20 "1"
+            Semicolon@20..21 ";"
+            Whitespace@21..22 " "
+            NumberLiteral@22..23
+              Number@22..23 "2"
+            CloseBracket@23..24 "]"
+          Semicolon@24..25 ";"
+          Whitespace@25..26 " "
+          NumberLiteral@26..27
+            Number@26..27 "3"
+          CloseBracket@27..28 "]"
+        Semicolon@28..29 ";"
+    ,
+    [],
+)

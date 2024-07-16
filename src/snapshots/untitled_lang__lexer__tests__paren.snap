@@ -1,6 +1,6 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"( ) { }\")"
+expression: "tokenize(\"( ) { } [ ]\")"
 ---
 (
     [
@@ -40,9 +40,29 @@ expression: "tokenize(\"( ) { }\")"
             range: 6..7,
         },
         Token {
+            kind: Whitespace,
+            text: " ",
+            range: 7..8,
+        },
+        Token {
+            kind: OpenBracket,
+            text: "[",
+            range: 8..9,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 9..10,
+        },
+        Token {
+            kind: CloseBracket,
+            text: "]",
+            range: 10..11,
+        },
+        Token {
             kind: Eof,
             text: "",
-            range: 7..7,
+            range: 11..11,
         },
     ],
     [],

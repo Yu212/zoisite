@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn paren() {
-        insta::assert_debug_snapshot!(tokenize("( ) { }"));
+        insta::assert_debug_snapshot!(tokenize("( ) { } [ ]"));
     }
 
     #[test]

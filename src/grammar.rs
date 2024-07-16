@@ -294,6 +294,11 @@ mod tests {
     }
 
     #[test]
+    fn let_array() {
+        insta::assert_debug_snapshot!(parse("let a: int[][] = [[1; 2]; 3];"));
+    }
+
+    #[test]
     fn ref_expr() {
         insta::assert_debug_snapshot!(parse("a + bc;"));
     }
@@ -301,6 +306,11 @@ mod tests {
     #[test]
     fn fn_call_expr() {
         insta::assert_debug_snapshot!(parse("f(a, 1);"));
+    }
+
+    #[test]
+    fn assign_expr() {
+        insta::assert_debug_snapshot!(parse("a = b[0] = 1;"));
     }
 
     #[test]

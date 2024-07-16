@@ -1,0 +1,30 @@
+---
+source: src/grammar.rs
+expression: "parse(\"a = b[0] = 1;\")"
+---
+(
+    Root@0..13
+      ExprStmt@0..13
+        BinaryExpr@0..12
+          RefExpr@0..2
+            Ident@0..1 "a"
+            Whitespace@1..2 " "
+          Equals@2..3 "="
+          Whitespace@3..4 " "
+          BinaryExpr@4..12
+            IndexExpr@4..9
+              RefExpr@4..5
+                Ident@4..5 "b"
+              OpenBracket@5..6 "["
+              NumberLiteral@6..7
+                Number@6..7 "0"
+              CloseBracket@7..8 "]"
+              Whitespace@8..9 " "
+            Equals@9..10 "="
+            Whitespace@10..11 " "
+            NumberLiteral@11..12
+              Number@11..12 "1"
+        Semicolon@12..13 ";"
+    ,
+    [],
+)
