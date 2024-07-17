@@ -119,6 +119,10 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<CompletedMarker
             SyntaxKind::Equals => OpKind::BinaryOp(BinaryOp::Assign),
             SyntaxKind::EqEq => OpKind::BinaryOp(BinaryOp::EqEq),
             SyntaxKind::Neq => OpKind::BinaryOp(BinaryOp::Neq),
+            SyntaxKind::Ge => OpKind::BinaryOp(BinaryOp::Ge),
+            SyntaxKind::Le => OpKind::BinaryOp(BinaryOp::Le),
+            SyntaxKind::Gt => OpKind::BinaryOp(BinaryOp::Gt),
+            SyntaxKind::Lt => OpKind::BinaryOp(BinaryOp::Lt),
             SyntaxKind::OpenBracket => OpKind::PostfixOp(PostfixOp::Index),
             _ => break,
         };

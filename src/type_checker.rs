@@ -78,7 +78,7 @@ impl TypeChecker {
                 } else {
                     match op {
                         BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => Type::Int,
-                        BinaryOp::EqEq | BinaryOp::Neq => Type::Bool,
+                        BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt => Type::Bool,
                         BinaryOp::Assign => rhs_ty,
                     }
                 }

@@ -108,6 +108,10 @@ impl OpKind {
             OpKind::BinaryOp(BinaryOp::Assign) => (2, 1),
             OpKind::BinaryOp(BinaryOp::EqEq) => (3, 4),
             OpKind::BinaryOp(BinaryOp::Neq) => (3, 4),
+            OpKind::BinaryOp(BinaryOp::Ge) => (3, 4),
+            OpKind::BinaryOp(BinaryOp::Le) => (3, 4),
+            OpKind::BinaryOp(BinaryOp::Gt) => (3, 4),
+            OpKind::BinaryOp(BinaryOp::Lt) => (3, 4),
             OpKind::PostfixOp(PostfixOp::Index) => (10, -1),
             OpKind::UnaryOp(UnaryOp::Neg) => (-1, 9),
         }
@@ -124,6 +128,10 @@ pub enum BinaryOp {
     Assign,
     EqEq,
     Neq,
+    Ge,
+    Le,
+    Gt,
+    Lt,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
