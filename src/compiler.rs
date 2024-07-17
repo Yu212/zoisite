@@ -86,14 +86,14 @@ impl<'ctx> Compiler<'ctx> {
         {
             let scanf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
             let scanf_function = self.module.add_function("scanf", scanf_type, None);
-            let input_type = i8_type.fn_type(&[], false);
+            let input_type = i64_type.fn_type(&[], false);
             let input_fn = self.module.add_function("input", input_type, None);
             let basic_block = self.context.append_basic_block(input_fn, "entry");
             self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%lld\n", "scanf_str").unwrap();
+            let format_str = self.builder.build_global_string_ptr("%lld", "scanf_str").unwrap();
             let scanf_ptr = self.builder.build_alloca(i64_type, "scanf_ptr").unwrap();
             self.builder.build_call(scanf_function, &[format_str.as_pointer_value().into(), scanf_ptr.into()], "").expect("build_call failed");
-            let val = self.builder.build_load(i8_type, scanf_ptr, "tmp").unwrap();
+            let val = self.builder.build_load(i64_type, scanf_ptr, "tmp").unwrap();
             self.builder.build_return(Some(&val)).unwrap();
             self.functions.insert(FnId(1), input_fn);
         }

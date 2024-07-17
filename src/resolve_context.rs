@@ -27,7 +27,7 @@ impl ResolveContext {
     }
     pub fn define_builtins(&mut self) {
         self.define_global_fn(EcoString::from("print"), vec![EcoString::from("n")], vec![Type::Int], Type::Unit);
-        self.define_global_fn(EcoString::from("input"), vec![], vec![], Type::Unit);
+        self.define_global_fn(EcoString::from("input"), vec![], vec![], Type::Int);
     }
     pub fn define_var(&mut self, name: EcoString, ty: Type) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
