@@ -26,8 +26,10 @@ impl ResolveContext {
         }
     }
     pub fn define_builtins(&mut self) {
-        self.define_global_fn(EcoString::from("print"), vec![EcoString::from("n")], vec![Type::Int], Type::Unit);
-        self.define_global_fn(EcoString::from("input"), vec![], vec![], Type::Int);
+        self.define_global_fn(EcoString::from("printInt"), vec![EcoString::from("n")], vec![Type::Int], Type::Unit);
+        self.define_global_fn(EcoString::from("printStr"), vec![EcoString::from("n")], vec![Type::Str], Type::Unit);
+        self.define_global_fn(EcoString::from("inputInt"), vec![], vec![], Type::Int);
+        self.define_global_fn(EcoString::from("inputStr"), vec![EcoString::from("len")], vec![Type::Int], Type::Str);
         self.define_global_fn(EcoString::from("chr"), vec![EcoString::from("n")], vec![Type::Int], Type::Char);
         self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
     }
