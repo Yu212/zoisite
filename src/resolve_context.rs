@@ -28,6 +28,8 @@ impl ResolveContext {
     pub fn define_builtins(&mut self) {
         self.define_global_fn(EcoString::from("print"), vec![EcoString::from("n")], vec![Type::Int], Type::Unit);
         self.define_global_fn(EcoString::from("input"), vec![], vec![], Type::Int);
+        self.define_global_fn(EcoString::from("chr"), vec![EcoString::from("n")], vec![Type::Int], Type::Char);
+        self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
     }
     pub fn define_var(&mut self, name: EcoString, ty: Type) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -84,6 +86,7 @@ impl ResolveContext {
             "int" => Type::Int,
             "bool" => Type::Bool,
             "str" => Type::Str,
+            "char" => Type::Char,
             "unit" => Type::Unit,
             _ => Type::Invalid,
         }

@@ -125,11 +125,7 @@ impl TypeChecker {
                 if index_ty != Type::Int {
                     self.mismatched();
                 }
-                if let Type::Array(inner_ty) = main_ty {
-                    *inner_ty
-                } else {
-                    self.mismatched()
-                }
+                main_ty.inner_ty().unwrap_or_else(|| self.mismatched())
             },
             Expr::Block { stmts } => {
                 if let Some(&stmt) = stmts.last() {

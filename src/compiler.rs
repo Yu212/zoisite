@@ -97,6 +97,26 @@ impl<'ctx> Compiler<'ctx> {
             self.builder.build_return(Some(&val)).unwrap();
             self.functions.insert(FnId(1), input_fn);
         }
+        {
+            let chr_type = i8_type.fn_type(&[i64_type.into()], false);
+            let chr_fn = self.module.add_function("chr", chr_type, None);
+            let basic_block = self.context.append_basic_block(chr_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let param = chr_fn.get_first_param().unwrap().into_int_value();
+            let ret_val = self.builder.build_int_truncate(param, i8_type, "tmp").unwrap();
+            self.builder.build_return(Some(&ret_val)).unwrap();
+            self.functions.insert(FnId(2), chr_fn);
+        }
+        {
+            let ord_type = i64_type.fn_type(&[i8_type.into()], false);
+            let ord_fn = self.module.add_function("ord", ord_type, None);
+            let basic_block = self.context.append_basic_block(ord_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let param = ord_fn.get_first_param().unwrap().into_int_value();
+            let ret_val = self.builder.build_int_z_extend(param, i64_type, "tmp").unwrap();
+            self.builder.build_return(Some(&ret_val)).unwrap();
+            self.functions.insert(FnId(3), ord_fn);
+        }
     }
     fn compile_stmt(&mut self, stmt: Stmt) -> Option<BasicValueEnum<'ctx>> {
         match stmt {
@@ -178,17 +198,13 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::Index { main_expr, index_expr } => {
                 let main_ty = &self.ty_map[main_expr];
-                if let Type::Array(inner_ty) = main_ty {
-                    let main_ty = main_ty.llvm_ty(self.context).unwrap();
-                    let inner_ty = inner_ty.llvm_ty(self.context).unwrap();
-                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
-                    let main_val = self.builder.build_load(main_ty, lvalue, "tmp").ok()?.into_pointer_value();
-                    let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
-                    let ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
-                    Some(ptr)
-                } else {
-                    unreachable!()
-                }
+                let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
+                let main_ty = main_ty.llvm_ty(self.context).unwrap();
+                let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
+                let main_val = self.builder.build_load(main_ty, lvalue, "tmp").ok()?.into_pointer_value();
+                let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
+                let ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
+                Some(ptr)
             },
             _ => unreachable!()
         }
@@ -272,15 +288,11 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::Index { main_expr, index_expr } => {
                 let main_ty = &self.ty_map[main_expr];
-                if let Type::Array(inner_ty) = main_ty {
-                    let inner_ty = inner_ty.llvm_ty(self.context).unwrap();
-                    let main_val = self.compile_expr(self.db.exprs[main_expr].clone())?.into_pointer_value();
-                    let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
-                    let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
-                    Some(self.builder.build_load(inner_ty, val_ptr, "tmp").ok()?.into())
-                } else {
-                    unreachable!()
-                }
+                let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
+                let main_val = self.compile_expr(self.db.exprs[main_expr].clone())?.into_pointer_value();
+                let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
+                let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
+                Some(self.builder.build_load(inner_ty, val_ptr, "tmp").ok()?.into())
             },
             Expr::Block { stmts } => {
                 let i8_type = self.context.i8_type();
@@ -296,7 +308,9 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::StringLiteral { val } => {
                 let str = self.context.const_string(val?.as_bytes(), true);
-                Some(str.into())
+                let str_ptr = self.builder.build_malloc(str.get_type(), "str").ok()?;
+                self.builder.build_store(str_ptr, str).ok()?;
+                Some(str_ptr.into())
             },
             Expr::ArrayLiteral { len, initial } => {
                 let i64_type = self.context.i64_type();
