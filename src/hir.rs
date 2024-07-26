@@ -4,11 +4,11 @@ use la_arena::Idx;
 use crate::resolve_context::FuncInfo;
 use crate::scope::{FnId, VarId};
 
-type ExprIdx = Idx<Expr>;
-type StmtIdx = Idx<Stmt>;
-type FuncIdx = Idx<Func>;
+pub type ExprIdx = Idx<Expr>;
+pub type StmtIdx = Idx<Stmt>;
+pub type FuncIdx = Idx<Func>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Root {
     pub stmts: Vec<StmtIdx>,
 }

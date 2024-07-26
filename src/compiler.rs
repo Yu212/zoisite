@@ -7,14 +7,12 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::BasicType;
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
-use la_arena::{ArenaMap, Idx};
+use la_arena::ArenaMap;
 
 use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, Func, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
 use crate::r#type::Type;
 use crate::scope::{FnId, VarId};
-
-type ExprIdx = Idx<Expr>;
 
 pub struct Compiler<'ctx> {
     pub db: Database,

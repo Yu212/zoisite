@@ -37,6 +37,7 @@ pub mod resolve_context;
 pub mod scope;
 pub mod type_checker;
 pub mod r#type;
+pub mod visitor;
 
 pub fn compile_no_output(text: &str) {
     let lexer = Lexer::new(text);
@@ -50,8 +51,8 @@ pub fn compile_no_output(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
-    let type_checker = TypeChecker::new();
-    let (ty_map, type_check_errors) = type_checker.check(&db);
+    let type_checker = TypeChecker::new(&db);
+    let (ty_map, type_check_errors) = type_checker.check(hir.clone());
     if !type_check_errors.is_empty() {
         return;
     }
@@ -93,8 +94,8 @@ pub fn compile(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
-    let type_checker = TypeChecker::new();
-    let (ty_map, type_check_errors) = type_checker.check(&db);
+    let type_checker = TypeChecker::new(&db);
+    let (ty_map, type_check_errors) = type_checker.check(hir.clone());
     eprintln!("type check errors: ");
     for err in &type_check_errors {
         eprintln!("{:?}", err);

@@ -1,48 +1,26 @@
-use la_arena::{ArenaMap, Idx};
+use la_arena::ArenaMap;
 
 use crate::database::Database;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
-use crate::hir::{BinaryOp, Expr, Stmt};
+use crate::hir::{BinaryOp, Expr, ExprIdx, Root, Stmt, StmtIdx};
 use crate::r#type::Type;
+use crate::visitor::{Visitor, walk_expr_idx, walk_stmt_idx};
 
-type ExprIdx = Idx<Expr>;
-type StmtIdx = Idx<Stmt>;
-
-pub struct TypeChecker {
+pub struct TypeChecker<'db> {
+    pub db: &'db Database,
     pub ty_map: ArenaMap<ExprIdx, Type>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
-impl TypeChecker {
-    pub fn new() -> Self {
-        TypeChecker {
-            ty_map: ArenaMap::default(),
-            diagnostics: Vec::new(),
-        }
-    }
-
-    pub fn check(mut self, db: &Database) -> (ArenaMap<ExprIdx, Type>, Vec<Diagnostic>) {
-        for (idx, _) in db.exprs.iter() {
-            self.expr_ty(db, idx.clone());
-        }
-        for (idx, _) in db.stmts.iter() {
-            self.check_stmt(db, idx.clone());
-        }
-        (self.ty_map, self.diagnostics)
-    }
-
-    fn mismatched(&mut self) -> Type {
-        self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeUnmatched, None));
-        Type::Invalid
-    }
-
-    pub fn check_stmt(&mut self, db: &Database, idx: StmtIdx) {
-        let stmt = db.stmts[idx].clone();
+impl Visitor for TypeChecker<'_> {
+    fn visit_stmt_idx(&mut self, idx: StmtIdx) {
+        walk_stmt_idx(self, idx);
+        let stmt = self.db.stmts[idx].clone();
         match stmt {
             Stmt::LetStmt { var_id, expr } => {
                 if let Some(var_id) = var_id {
-                    let expr_ty = self.expr_ty(db, expr);
-                    let var = db.resolve_ctx.get_var(var_id);
+                    let expr_ty = self.expr_ty(expr);
+                    let var = self.db.resolve_ctx.get_var(var_id);
                     if var.ty != expr_ty {
                         self.mismatched();
                     }
@@ -52,9 +30,9 @@ impl TypeChecker {
             Stmt::BreakStmt { .. } => {}
             Stmt::ExprStmt { .. } => {}
             Stmt::FuncDef { func } => {
-                let func = db.funcs[func].clone();
+                let func = self.db.funcs[func].clone();
                 if let Some(func_info) = func.fn_info {
-                    let block_ty = self.expr_ty(db, func.block);
+                    let block_ty = self.expr_ty(func.block);
                     if block_ty != func_info.return_ty {
                         self.mismatched();
                     }
@@ -63,16 +41,14 @@ impl TypeChecker {
         }
     }
 
-    pub fn expr_ty(&mut self, db: &Database, idx: ExprIdx) -> Type {
-        if let Some(ty) = self.ty_map.get(idx) {
-            return ty.clone();
-        }
-        let expr = db.exprs[idx].clone();
+    fn visit_expr_idx(&mut self, idx: ExprIdx) {
+        walk_expr_idx(self, idx);
+        let expr = self.db.exprs[idx].clone();
         let ty = match expr {
             Expr::Missing => Type::Unit,
             Expr::Binary { op, lhs, rhs } => {
-                let lhs_ty = self.expr_ty(db, lhs);
-                let rhs_ty = self.expr_ty(db, rhs);
+                let lhs_ty = self.expr_ty(lhs);
+                let rhs_ty = self.expr_ty(rhs);
                 if lhs_ty != rhs_ty {
                     self.mismatched()
                 } else {
@@ -83,22 +59,22 @@ impl TypeChecker {
                     }
                 }
             }
-            Expr::Unary { op: _, expr } => self.expr_ty(db, expr),
+            Expr::Unary { op: _, expr } => self.expr_ty(expr),
             Expr::Ref { var_id } => {
                 if let Some(var_id) = var_id {
-                    let var = db.resolve_ctx.get_var(var_id);
+                    let var = self.db.resolve_ctx.get_var(var_id);
                     var.ty.clone()
                 } else {
                     Type::Unit
                 }
             }
             Expr::If { cond, then_expr, else_expr } => {
-                let cond_ty = self.expr_ty(db, cond);
+                let cond_ty = self.expr_ty(cond);
                 if cond_ty != Type::Bool {
                     self.mismatched();
                 }
-                let then_ty = self.expr_ty(db, then_expr);
-                let else_ty = else_expr.map_or(Type::Unit, |expr| self.expr_ty(db, expr));
+                let then_ty = self.expr_ty(then_expr);
+                let else_ty = else_expr.map_or(Type::Unit, |expr| self.expr_ty(expr));
                 if then_ty != else_ty {
                     self.mismatched()
                 } else {
@@ -107,9 +83,9 @@ impl TypeChecker {
             }
             Expr::FnCall { fn_id, args } => {
                 if let Some(fn_id) = fn_id {
-                    let func = db.resolve_ctx.get_fn(fn_id);
+                    let func = self.db.resolve_ctx.get_fn(fn_id);
                     for (&arg, params_ty) in args.iter().zip(&func.params_ty) {
-                        let args_ty = self.expr_ty(db, arg);
+                        let args_ty = self.expr_ty(arg);
                         if args_ty != *params_ty {
                             self.mismatched();
                         }
@@ -120,8 +96,8 @@ impl TypeChecker {
                 }
             },
             Expr::Index { main_expr, index_expr } => {
-                let main_ty = self.expr_ty(db, main_expr);
-                let index_ty = self.expr_ty(db, index_expr);
+                let main_ty = self.expr_ty(main_expr);
+                let index_ty = self.expr_ty(index_expr);
                 if index_ty != Type::Int {
                     self.mismatched();
                 }
@@ -129,8 +105,8 @@ impl TypeChecker {
             },
             Expr::Block { stmts } => {
                 if let Some(&stmt) = stmts.last() {
-                    if let Stmt::ExprStmt { expr } = db.stmts[stmt] {
-                        self.expr_ty(db, expr)
+                    if let Stmt::ExprStmt { expr } = self.db.stmts[stmt] {
+                        self.expr_ty(expr)
                     } else {
                         Type::Unit
                     }
@@ -142,8 +118,8 @@ impl TypeChecker {
             Expr::BoolLiteral { val: _ } => Type::Bool,
             Expr::StringLiteral { val: _ } => Type::Str,
             Expr::ArrayLiteral { len, initial } => {
-                let len_ty = self.expr_ty(db, len);
-                let initial_ty = self.expr_ty(db, initial);
+                let len_ty = self.expr_ty(len);
+                let initial_ty = self.expr_ty(initial);
                 if len_ty != Type::Int {
                     self.mismatched();
                 }
@@ -151,6 +127,33 @@ impl TypeChecker {
             },
         };
         self.ty_map.insert(idx, ty.clone());
-        ty
+    }
+    
+    fn db(&self) -> &Database {
+        self.db
+    }
+}
+
+impl TypeChecker<'_> {
+    pub fn new(db: &Database) -> TypeChecker {
+        TypeChecker {
+            db,
+            ty_map: ArenaMap::default(),
+            diagnostics: Vec::new(),
+        }
+    }
+
+    pub fn check(mut self, root: Root) -> (ArenaMap<ExprIdx, Type>, Vec<Diagnostic>) {
+        self.visit_root(root);
+        (self.ty_map, self.diagnostics)
+    }
+
+    fn mismatched(&mut self) -> Type {
+        self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeUnmatched, None));
+        Type::Invalid
+    }
+
+    pub fn expr_ty(&mut self, idx: ExprIdx) -> Type {
+        self.ty_map.get(idx).unwrap().clone()
     }
 }
