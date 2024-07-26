@@ -4,6 +4,7 @@ use std::mem;
 use std::ops::Index;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::Instant;
 
 use inkwell::context::Context;
 use inkwell::module::Module;
@@ -64,6 +65,7 @@ pub fn compile_no_output(text: &str) {
 }
 
 pub fn compile(text: &str) {
+    let start = Instant::now();
     let lexer = Lexer::new(text);
     let (tokens, lexer_errors) = lexer.tokenize();
     let parser = Parser::new(tokens);
@@ -103,8 +105,10 @@ pub fn compile(text: &str) {
     let context = Context::create();
     let compiler = Compiler::new(&context, db, ty_map, "main");
     let module = compiler.compile(&hir);
+    println!("compile: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
     optimize(&module);
+    println!("optimized: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
     run_llvm_ir();
 }
