@@ -41,8 +41,10 @@ pub fn while_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::WhileKw));
     let m = p.start();
     p.bump();
+    p.expect(SyntaxKind::OpenParen);
     expr(p, 0);
-    block_expr(p);
+    p.expect(SyntaxKind::CloseParen);
+    expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::WhileStmt)
 }
@@ -196,10 +198,12 @@ pub fn if_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::IfKw));
     let m = p.start();
     p.bump();
+    p.expect(SyntaxKind::OpenParen);
     expr(p, 0);
-    block_expr(p);
+    p.expect(SyntaxKind::CloseParen);
+    expr(p, 0);
     if p.eat(SyntaxKind::ElseKw) {
-        block_expr(p);
+        expr(p, 0);
     }
     m.complete(p, SyntaxKind::IfExpr)
 }
