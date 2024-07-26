@@ -1,3 +1,5 @@
+use std::mem;
+
 use la_arena::ArenaMap;
 
 use crate::database::Database;
@@ -143,9 +145,9 @@ impl TypeChecker<'_> {
         }
     }
 
-    pub fn check(mut self, root: Root) -> (ArenaMap<ExprIdx, Type>, Vec<Diagnostic>) {
+    pub fn check(&mut self, root: Root) -> Vec<Diagnostic> {
         self.visit_root(root);
-        (self.ty_map, self.diagnostics)
+        mem::take(&mut self.diagnostics)
     }
 
     fn mismatched(&mut self) -> Type {

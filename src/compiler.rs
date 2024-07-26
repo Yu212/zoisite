@@ -7,15 +7,15 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::BasicType;
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
-use la_arena::ArenaMap;
 
 use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, Func, Root, Stmt, UnaryOp};
 use crate::r#type::Type;
 use crate::scope::{FnId, VarId};
+use crate::type_checker::TypeChecker;
 
 pub struct Compiler<'ctx> {
-    pub db: Database,
+    pub db: &'ctx Database,
     pub context: &'ctx Context,
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
@@ -23,11 +23,11 @@ pub struct Compiler<'ctx> {
     pub functions: HashMap<FnId, FunctionValue<'ctx>>,
     pub cur_function: Option<FunctionValue<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>,
-    pub ty_map: ArenaMap<ExprIdx, Type>,
+    pub type_checker: TypeChecker<'ctx>,
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn new(context: &'ctx Context, db: Database, ty_map: ArenaMap<ExprIdx, Type>, module_name: &str) -> Self {
+    pub fn new(context: &'ctx Context, db: &'ctx Database, type_checker: TypeChecker<'ctx>, module_name: &str) -> Self {
         let module = context.create_module(module_name);
         let builder = context.create_builder();
         Self {
@@ -39,7 +39,7 @@ impl<'ctx> Compiler<'ctx> {
             functions: HashMap::new(),
             cur_function: None,
             loop_stack: Vec::new(),
-            ty_map,
+            type_checker,
         }
     }
     pub fn compile(mut self, root: &Root) -> Module<'ctx> {
@@ -220,7 +220,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(self.addresses[&var_id?])
             },
             Expr::Index { main_expr, index_expr } => {
-                let main_ty = &self.ty_map[main_expr];
+                let main_ty = &self.type_checker.expr_ty(main_expr);
                 let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
                 let main_ty = main_ty.llvm_ty(self.context).unwrap();
                 let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
@@ -314,7 +314,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(ret_val)
             },
             Expr::Index { main_expr, index_expr } => {
-                let main_ty = &self.ty_map[main_expr];
+                let main_ty = &self.type_checker.expr_ty(main_expr);
                 let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
                 let main_val = self.compile_expr(self.db.exprs[main_expr].clone())?.into_pointer_value();
                 let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
