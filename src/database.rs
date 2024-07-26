@@ -1,3 +1,5 @@
+use std::mem;
+
 use ecow::EcoString;
 use la_arena::Arena;
 use rowan::ast::AstNode;
@@ -31,14 +33,15 @@ impl Database {
             loop_nest: 0,
         }
     }
-    pub fn lower_root(&mut self, ast: ast::Root) -> Root {
+    pub fn lower_root(&mut self, ast: ast::Root) -> (Root, Vec<Diagnostic>) {
         self.resolve_ctx.define_builtins();
-        Root {
+        let root = Root {
             stmts: ast.stmts().map(|stmt| {
                 let temp = self.lower_stmt(stmt);
                 self.stmts.alloc(temp)
             }).collect(),
-        }
+        };
+        (root, mem::take(&mut self.diagnostics))
     }
     pub fn lower_func(&mut self, ast: ast::FuncDef) -> Stmt {
         self.resolve_ctx.push_scope(true);

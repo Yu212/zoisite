@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::Write;
-use std::mem;
 use std::ops::Index;
 use std::path::PathBuf;
 use std::process::Command;
@@ -46,8 +45,7 @@ pub fn compile_no_output(text: &str) {
     let (syntax, parser_errors) = parser.parse();
     let root = Root::cast(syntax).unwrap();
     let mut db = Database::new();
-    let hir = db.lower_root(root);
-    let lower_errors = mem::take(&mut db.diagnostics);
+    let (hir, lower_errors) = db.lower_root(root);
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
@@ -83,8 +81,7 @@ pub fn compile(text: &str) {
     syntax_file.write_all(format!("{:#?}", syntax).as_bytes()).unwrap();
     let root = Root::cast(syntax).unwrap();
     let mut db = Database::new();
-    let hir = db.lower_root(root);
-    let lower_errors = mem::take(&mut db.diagnostics);
+    let (hir, lower_errors) = db.lower_root(root);
     eprintln!("lower errors: ");
     for err in &lower_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
