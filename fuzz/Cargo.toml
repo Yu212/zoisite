@@ -1,5 +1,5 @@
 [package]
-name = "untitled-lang-fuzz"
+name = "zoisite-fuzz"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,4 +14,4 @@ path = "fuzz_targets/main.rs"
 
 [dependencies]
 libfuzzer-sys = "0.4.7"
-untitled-lang = { path = ".." }
+zoisite = { path = ".." }

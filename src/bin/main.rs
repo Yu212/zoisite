@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use untitled_lang::compile;
+use zoisite::compile;
 
 fn main() {
     let mut file = File::open("./files/main").expect("file not found");

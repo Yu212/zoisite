@@ -296,20 +296,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9df2af067a7953e9c3831320f35c1cc0600c30d44d9f7a12b01db1cd88d6b47"
 
 [[package]]
-name = "untitled-lang"
-version = "0.1.0"
-dependencies = [
- "drop_bomb",
- "ecow",
- "inkwell",
- "insta",
- "la-arena",
- "llvm-sys",
- "rowan",
- "unscanny",
-]
-
-[[package]]
 name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -382,4 +368,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
+]
+
+[[package]]
+name = "zoisite"
+version = "0.1.0"
+dependencies = [
+ "drop_bomb",
+ "ecow",
+ "inkwell",
+ "insta",
+ "la-arena",
+ "llvm-sys",
+ "rowan",
+ "unscanny",
 ]
