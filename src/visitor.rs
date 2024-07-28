@@ -8,20 +8,20 @@ pub trait Visitor: Sized {
     fn visit_func(&mut self, func: Func) {
         walk_func(self, func);
     }
-    fn visit_func_idx(&mut self, func: FuncIdx) {
-        walk_func_idx(self, func);
+    fn visit_func_idx(&mut self, idx: FuncIdx) {
+        walk_func_idx(self, idx);
     }
     fn visit_stmt(&mut self, stmt: Stmt) {
         walk_stmt(self, stmt);
     }
-    fn visit_stmt_idx(&mut self, stmt: StmtIdx) {
-        walk_stmt_idx(self, stmt);
+    fn visit_stmt_idx(&mut self, idx: StmtIdx) {
+        walk_stmt_idx(self, idx);
     }
     fn visit_expr(&mut self, expr: Expr) {
         walk_expr(self, expr);
     }
-    fn visit_expr_idx(&mut self, expr: ExprIdx) {
-        walk_expr_idx(self, expr);
+    fn visit_expr_idx(&mut self, idx: ExprIdx) {
+        walk_expr_idx(self, idx);
     }
     fn db(&self) -> &Database;
 }
