@@ -36,6 +36,7 @@ pub fn walk_func<V: Visitor>(visitor: &mut V, node: Func) {
 }
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, node: Stmt) {
     match node {
+        Stmt::EmptyStmt { range: _ } => {}
         Stmt::LetStmt { var_id: _, expr, range: _ } => {
             visitor.visit_expr_idx(expr);
         }

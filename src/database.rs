@@ -72,11 +72,17 @@ impl Database {
     }
     pub fn lower_stmt(&mut self, ast: ast::Stmt) -> Stmt {
         match ast {
+            ast::Stmt::EmptyStmt(ast) => self.lower_empty_stmt(ast),
             ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
             ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
             ast::Stmt::BreakStmt(ast) => self.lower_break_stmt(ast),
             ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
             ast::Stmt::FuncDef(ast) => self.lower_func(ast),
+        }
+    }
+    pub fn lower_empty_stmt(&mut self, ast: ast::EmptyStmt) -> Stmt {
+        Stmt::EmptyStmt {
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {

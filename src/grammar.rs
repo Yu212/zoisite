@@ -10,19 +10,28 @@ pub fn root(p: &mut Parser<'_>) {
     let m = p.start();
     p.eat_trivia();
     while !p.at(SyntaxKind::Eof) {
-        stmt(p);
+        let (_, semicolon) = stmt(p);
+        if semicolon {
+            p.expect(SyntaxKind::Semicolon);
+        }
     }
     m.complete(p, SyntaxKind::Root);
 }
 
-pub fn stmt(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn stmt(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
     match p.current() {
-        SyntaxKind::LetKw => let_stmt(p),
-        SyntaxKind::WhileKw => while_stmt(p),
-        SyntaxKind::BreakKw => break_stmt(p),
-        SyntaxKind::FunKw => func_stmt(p),
-        _ => expr_stmt(p),
+        SyntaxKind::Semicolon => (empty_stmt(p), true),
+        SyntaxKind::LetKw => (let_stmt(p), true),
+        SyntaxKind::WhileKw => (while_stmt(p), true),
+        SyntaxKind::BreakKw => (break_stmt(p), true),
+        SyntaxKind::FunKw => (func_stmt(p), false),
+        _ => (expr_stmt(p), true),
     }
+}
+
+pub fn empty_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    let m = p.start();
+    m.complete(p, SyntaxKind::EmptyStmt)
 }
 
 pub fn func_stmt(p: &mut Parser<'_>) -> CompletedMarker {
@@ -45,7 +54,6 @@ pub fn while_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     expr(p, 0);
     p.expect(SyntaxKind::CloseParen);
     expr(p, 0);
-    p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::WhileStmt)
 }
 
@@ -53,14 +61,12 @@ pub fn break_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::BreakKw));
     let m = p.start();
     p.bump();
-    p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::BreakStmt)
 }
 
 pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     expr(p, 0);
-    p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::ExprStmt)
 }
 
@@ -105,7 +111,6 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     typed_ident(p);
     p.expect(SyntaxKind::Equals);
     expr(p, 0);
-    p.expect(SyntaxKind::Semicolon);
     m.complete(p, SyntaxKind::LetStmt)
 }
 
@@ -226,8 +231,18 @@ pub fn fn_call_expr(p: &mut Parser<'_>) -> CompletedMarker {
 pub fn block_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::OpenBrace);
-    while !p.at(SyntaxKind::CloseBrace) && !p.at(SyntaxKind::Eof) {
-        stmt(p);
+    while !p.at(SyntaxKind::Eof) {
+        if p.at(SyntaxKind::CloseBrace) {
+            empty_stmt(p);
+            break;
+        }
+        let (_, semicolon) = stmt(p);
+        if p.at(SyntaxKind::CloseBrace) {
+            break;
+        }
+        if semicolon {
+            p.expect(SyntaxKind::Semicolon);
+        }
     }
     p.expect(SyntaxKind::CloseBrace);
     m.complete(p, SyntaxKind::BlockExpr)

@@ -143,6 +143,10 @@ impl<'ctx> Compiler<'ctx> {
     }
     fn compile_stmt(&mut self, stmt: Stmt) -> Option<BasicValueEnum<'ctx>> {
         match stmt {
+            Stmt::EmptyStmt { range: _ } => {
+                let i8_type = self.context.i8_type();
+                Some(i8_type.const_int(0, false).into())
+            },
             Stmt::LetStmt { var_id, expr, range: _ } => {
                 let var_id = var_id?;
                 let var_info = self.db.resolve_ctx.get_var(var_id);

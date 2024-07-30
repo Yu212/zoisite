@@ -76,6 +76,7 @@ macro_rules! ast {
 asts! {
     Root;
     Stmt [
+        EmptyStmt,
         LetStmt,
         WhileStmt,
         BreakStmt,

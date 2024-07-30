@@ -24,6 +24,9 @@ pub struct Func {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+    EmptyStmt {
+        range: TextRange,
+    },
     LetStmt {
         var_id: Option<VarId>,
         expr: ExprIdx,

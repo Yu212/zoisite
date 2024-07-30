@@ -57,6 +57,7 @@ pub enum SyntaxKind {
     IndexExpr,
     BlockExpr,
     Stmt,
+    EmptyStmt,
     LetStmt,
     WhileStmt,
     BreakStmt,

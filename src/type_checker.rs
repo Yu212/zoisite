@@ -20,6 +20,7 @@ impl Visitor for TypeChecker<'_> {
         walk_stmt_idx(self, idx);
         let stmt = self.db.stmts[idx].clone();
         match stmt {
+            Stmt::EmptyStmt { range: _ } => {}
             Stmt::LetStmt { var_id, expr, range } => {
                 if let Some(var_id) = var_id {
                     let expr_ty = self.expr_ty(expr);
