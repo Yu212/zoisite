@@ -86,7 +86,7 @@ impl<'a> Parser<'a> {
         self.events.push(Event::Error(Diagnostic::new(DiagnosticKind::UnexpectedToken {
             expected: expected.to_vec(),
             actual: self.current(),
-        }, Some(self.current_range()))));
+        }, self.current_range())));
     }
     pub fn error_and_recover(&mut self, expected: &[SyntaxKind], recovery: &TokenSet) {
         if self.at_set(recovery) {

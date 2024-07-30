@@ -36,18 +36,18 @@ pub fn walk_func<V: Visitor>(visitor: &mut V, node: Func) {
 }
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, node: Stmt) {
     match node {
-        Stmt::LetStmt { var_id: _, expr } => {
+        Stmt::LetStmt { var_id: _, expr, range: _ } => {
             visitor.visit_expr_idx(expr);
         }
-        Stmt::WhileStmt { cond, block } => {
+        Stmt::WhileStmt { cond, block, range: _ } => {
             visitor.visit_expr_idx(cond);
             visitor.visit_expr_idx(block);
         }
-        Stmt::BreakStmt {} => {}
-        Stmt::ExprStmt { expr } => {
+        Stmt::BreakStmt { range: _ } => {}
+        Stmt::ExprStmt { expr, range: _ } => {
             visitor.visit_expr_idx(expr);
         }
-        Stmt::FuncDef { func } => {
+        Stmt::FuncDef { func, range: _ } => {
             visitor.visit_func_idx(func);
         }
     }
@@ -55,39 +55,39 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, node: Stmt) {
 pub fn walk_expr<V: Visitor>(visitor: &mut V, node: Expr) {
     match node {
         Expr::Missing => {}
-        Expr::Binary { op: _, lhs, rhs } => {
+        Expr::Binary { op: _, lhs, rhs, range: _ } => {
             visitor.visit_expr_idx(lhs);
             visitor.visit_expr_idx(rhs);
         }
-        Expr::Unary { op: _, expr } => {
+        Expr::Unary { op: _, expr, range: _ } => {
             visitor.visit_expr_idx(expr);
         }
-        Expr::Ref { var_id: _ } => {}
-        Expr::If { cond, then_expr, else_expr } => {
+        Expr::Ref { var_id: _, range: _ } => {}
+        Expr::If { cond, then_expr, else_expr, range: _ } => {
             visitor.visit_expr_idx(cond);
             visitor.visit_expr_idx(then_expr);
             if let Some(else_expr) = else_expr {
                 visitor.visit_expr_idx(else_expr);
             }
         }
-        Expr::FnCall { fn_id: _, args } => {
+        Expr::FnCall { fn_id: _, args, range: _ } => {
             for arg in args {
                 visitor.visit_expr_idx(arg);
             }
         }
-        Expr::Index { main_expr, index_expr } => {
+        Expr::Index { main_expr, index_expr, range: _ } => {
             visitor.visit_expr_idx(main_expr);
             visitor.visit_expr_idx(index_expr);
         }
-        Expr::Block { stmts } => {
+        Expr::Block { stmts, range: _ } => {
             for stmt in stmts {
                 visitor.visit_stmt_idx(stmt);
             }
         }
-        Expr::NumberLiteral { n: _ } => {}
-        Expr::BoolLiteral { val: _ } => {}
-        Expr::StringLiteral { val: _ } => {}
-        Expr::ArrayLiteral { len, initial } => {
+        Expr::NumberLiteral { n: _, range: _ } => {}
+        Expr::BoolLiteral { val: _, range: _ } => {}
+        Expr::StringLiteral { val: _, range: _ } => {}
+        Expr::ArrayLiteral { len, initial, range: _ } => {
             visitor.visit_expr_idx(len);
             visitor.visit_expr_idx(initial);
         }

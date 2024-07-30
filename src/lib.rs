@@ -71,11 +71,11 @@ pub fn compile(text: &str) {
     let (syntax, parser_errors) = parser.parse();
     eprintln!("lexer errors: ");
     for err in &lexer_errors {
-        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
+        eprintln!("{:?} {:?}", err, text.index(err.range));
     }
     eprintln!("parser errors: ");
     for err in &parser_errors {
-        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
+        eprintln!("{:?} {:?}", err, text.index(err.range));
     }
     let mut syntax_file = File::create("./files/output.syntax").unwrap();
     syntax_file.write_all(format!("{:#?}", syntax).as_bytes()).unwrap();
@@ -84,7 +84,7 @@ pub fn compile(text: &str) {
     let (hir, lower_errors) = db.lower_root(root);
     eprintln!("lower errors: ");
     for err in &lower_errors {
-        eprintln!("{:?} {:?}", err, text.index(err.range.unwrap()));
+        eprintln!("{:?} {:?}", err, text.index(err.range));
     }
     eprintln!("hir: ");
     eprintln!("{:?}", hir);
@@ -95,7 +95,7 @@ pub fn compile(text: &str) {
     let type_check_errors = type_checker.check(hir.clone());
     eprintln!("type check errors: ");
     for err in &type_check_errors {
-        eprintln!("{:?}", err);
+        eprintln!("{:?} {:?}", err, text.index(err.range));
     }
     if !type_check_errors.is_empty() {
         return;

@@ -40,6 +40,7 @@ impl Database {
                 let temp = self.lower_stmt(stmt);
                 self.stmts.alloc(temp)
             }).collect(),
+            range: ast.syntax().text_range(),
         };
         (root, mem::take(&mut self.diagnostics))
     }
@@ -60,11 +61,13 @@ impl Database {
         let block = self.lower_expr(ast.block());
         let func = Func {
             fn_info,
-            block: self.exprs.alloc(block)
+            block: self.exprs.alloc(block),
+            range: ast.syntax().text_range(),
         };
         self.resolve_ctx.pop_scope();
         Stmt::FuncDef {
             func: self.funcs.alloc(func),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_stmt(&mut self, ast: ast::Stmt) -> Stmt {
@@ -88,6 +91,7 @@ impl Database {
         Stmt::LetStmt {
             var_id,
             expr: self.exprs.alloc(expr),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_while_stmt(&mut self, ast: ast::WhileStmt) -> Stmt {
@@ -98,20 +102,23 @@ impl Database {
         Stmt::WhileStmt {
             cond: self.exprs.alloc(cond),
             block: self.exprs.alloc(block),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_break_stmt(&mut self, ast: ast::BreakStmt) -> Stmt {
         if self.loop_nest == 0 {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::BreakOutsideLoop, Some(range)));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::BreakOutsideLoop, range));
         }
         Stmt::BreakStmt {
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_expr_stmt(&mut self, ast: ast::ExprStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
         Stmt::ExprStmt {
             expr: self.exprs.alloc(expr),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_type(&mut self, ast: Option<TypeSpec>) -> Type {
@@ -127,7 +134,7 @@ impl Database {
             self.resolve_ctx.resolve_ty(&name)
         } else {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidType, Some(range)));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidType, range));
             Type::Invalid
         }
     }
@@ -149,13 +156,13 @@ impl Database {
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             Some(ast::Expr::StringLiteral(ast)) => self.lower_string_literal(ast),
             Some(ast::Expr::ArrayLiteral(ast)) => self.lower_array_literal(ast),
-            None => Expr::Missing,
+            None => Expr::Missing
         }
     }
     pub fn is_lvalue(&self, expr: &Expr) -> bool {
         match expr {
-            Expr::Ref { var_id: _ } => true,
-            Expr::Index { main_expr, index_expr: _ } => self.is_lvalue(&self.exprs[*main_expr]),
+            Expr::Ref { var_id: _, range: _ } => true,
+            Expr::Index { main_expr, index_expr: _, range: _ } => self.is_lvalue(&self.exprs[*main_expr]),
             _ => false,
         }
     }
@@ -179,12 +186,13 @@ impl Database {
         let rhs = self.lower_expr(ast.rhs());
         if op == BinaryOp::Assign && !self.is_lvalue(&lhs) {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidLhs, Some(range)));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidLhs, range));
         }
         Expr::Binary {
             op,
             lhs: self.exprs.alloc(lhs),
             rhs: self.exprs.alloc(rhs),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_prefix_expr(&mut self, ast: ast::PrefixExpr) -> Expr {
@@ -192,16 +200,18 @@ impl Database {
         Expr::Unary {
             op: UnaryOp::Neg,
             expr: self.exprs.alloc(expr),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
         let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident.name));
         if var_id.is_none() {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, Some(range)));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
         }
         Expr::Ref {
             var_id,
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_if_expr(&mut self, ast: ast::IfExpr) -> Expr {
@@ -212,6 +222,7 @@ impl Database {
             cond: self.exprs.alloc(cond),
             then_expr: self.exprs.alloc(then_expr),
             else_expr: else_expr.map(|expr| self.exprs.alloc(expr)),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_fn_call_expr(&mut self, ast: ast::FnCallExpr) -> Expr {
@@ -222,11 +233,12 @@ impl Database {
         let fn_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident.name, args.len()));
         if fn_id.is_none() {
             let range = ast.syntax().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, Some(range)));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
         }
         Expr::FnCall {
             fn_id,
             args,
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_index_expr(&mut self, ast: ast::IndexExpr) -> Expr {
@@ -235,6 +247,7 @@ impl Database {
         Expr::Index {
             main_expr: self.exprs.alloc(main_expr),
             index_expr: self.exprs.alloc(index_expr),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_block_expr(&mut self, ast: ast::BlockExpr) -> Expr {
@@ -246,27 +259,31 @@ impl Database {
         self.resolve_ctx.pop_scope();
         Expr::Block {
             stmts,
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_number_literal(&mut self, ast: ast::NumberLiteral) -> Expr {
         let parsed = ast.parse();
         if parsed.is_none() {
             let range = ast.syntax().first_token().unwrap().text_range();
-            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, Some(range)));
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, range));
         }
         Expr::NumberLiteral {
             n: parsed,
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_bool_literal(&mut self, ast: ast::BoolLiteral) -> Expr {
         let parsed = ast.parse();
         Expr::BoolLiteral {
             val: parsed,
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_string_literal(&mut self, ast: ast::StringLiteral) -> Expr {
         Expr::StringLiteral {
             val: ast.parse(),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_array_literal(&mut self, ast: ast::ArrayLiteral) -> Expr {
@@ -275,11 +292,13 @@ impl Database {
         Expr::ArrayLiteral {
             len: self.exprs.alloc(len),
             initial: self.exprs.alloc(initial),
+            range: ast.syntax().text_range(),
         }
     }
     pub fn lower_ident(&mut self, ast: Option<SyntaxToken>) -> Option<Identifier> {
-        Some(Identifier {
-            name: EcoString::from(ast?.text()),
+        ast.map(|ast| Identifier {
+            name: EcoString::from(ast.text()),
+            range: ast.text_range(),
         })
     }
 }

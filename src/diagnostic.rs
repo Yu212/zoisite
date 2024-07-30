@@ -5,11 +5,11 @@ use crate::syntax_kind::SyntaxKind;
 #[derive(Debug)]
 pub struct Diagnostic {
     pub kind: DiagnosticKind,
-    pub range: Option<TextRange>,
+    pub range: TextRange,
 }
 
 impl Diagnostic {
-    pub fn new(kind: DiagnosticKind, range: Option<TextRange>) -> Self {
+    pub fn new(kind: DiagnosticKind, range: TextRange) -> Self {
         Self {
             kind, range
         }

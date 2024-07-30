@@ -34,7 +34,7 @@ impl<'a> Lexer<'a> {
                 range,
             });
             if let Some(diagnostic_kind) = self.current_diagnostic_kind.take() {
-                diagnostics.push(Diagnostic::new(diagnostic_kind, Some(range)));
+                diagnostics.push(Diagnostic::new(diagnostic_kind, range));
             }
             if kind.is_eof() {
                 return (self.tokens, diagnostics);
