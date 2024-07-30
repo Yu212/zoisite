@@ -53,7 +53,12 @@ impl Visitor for TypeChecker<'_> {
             Expr::Binary { op, lhs, rhs, range } => {
                 let lhs_ty = self.expr_ty(lhs);
                 let rhs_ty = self.expr_ty(rhs);
-                if lhs_ty != rhs_ty {
+                let matched = match op {
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => lhs_ty == Type::Int && rhs_ty == Type::Int,
+                    BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt => lhs_ty == Type::Int && rhs_ty == Type::Int,
+                    BinaryOp::Assign => lhs_ty == rhs_ty,
+                };
+                if !matched {
                     self.mismatched(range)
                 } else {
                     match op {
