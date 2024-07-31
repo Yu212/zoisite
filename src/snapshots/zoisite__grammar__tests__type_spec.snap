@@ -1,0 +1,29 @@
+---
+source: src/grammar.rs
+expression: "parse(\"let a: int[]? = 0;\")"
+---
+(
+    Root@0..18
+      LetStmt@0..17
+        LetKw@0..3 "let"
+        Whitespace@3..4 " "
+        TypedIdent@4..14
+          Ident@4..5 "a"
+          Colon@5..6 ":"
+          Whitespace@6..7 " "
+          OptionTypeSpec@7..14
+            ArrayTypeSpec@7..12
+              IdentTypeSpec@7..10
+                Ident@7..10 "int"
+              OpenBracket@10..11 "["
+              CloseBracket@11..12 "]"
+            Question@12..13 "?"
+            Whitespace@13..14 " "
+        Equals@14..15 "="
+        Whitespace@15..16 " "
+        NumberLiteral@16..17
+          Number@16..17 "0"
+      Semicolon@17..18 ";"
+    ,
+    [],
+)

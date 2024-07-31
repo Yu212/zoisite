@@ -131,6 +131,7 @@ impl Database {
         match ast {
             Some(ast::TypeSpec::IdentTypeSpec(ast)) => self.lower_ident_type(ast),
             Some(ast::TypeSpec::ArrayTypeSpec(ast)) => self.lower_array_type(ast),
+            Some(ast::TypeSpec::OptionTypeSpec(ast)) => self.lower_option_type(ast),
             None => Type::Invalid,
         }
     }
@@ -147,6 +148,10 @@ impl Database {
     pub fn lower_array_type(&mut self, ast: ast::ArrayTypeSpec) -> Type {
         let inner_ty = self.lower_type(ast.inner_ty());
         Type::Array(Box::new(inner_ty))
+    }
+    pub fn lower_option_type(&mut self, ast: ast::OptionTypeSpec) -> Type {
+        let inner_ty = self.lower_type(ast.inner_ty());
+        Type::Option(Box::new(inner_ty))
     }
     pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> Expr {
         match ast {

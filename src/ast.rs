@@ -86,6 +86,7 @@ asts! {
     TypeSpec [
         IdentTypeSpec,
         ArrayTypeSpec,
+        OptionTypeSpec,
     ];
     Expr [
         BinaryExpr,
@@ -173,6 +174,12 @@ impl IdentTypeSpec {
 }
 
 impl ArrayTypeSpec {
+    pub fn inner_ty(&self) -> Option<TypeSpec> {
+        self.0.children().find_map(TypeSpec::cast)
+    }
+}
+
+impl OptionTypeSpec {
     pub fn inner_ty(&self) -> Option<TypeSpec> {
         self.0.children().find_map(TypeSpec::cast)
     }

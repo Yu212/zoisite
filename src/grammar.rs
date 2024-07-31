@@ -82,11 +82,21 @@ pub fn type_spec(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::Ident);
     let mut c = m.complete(p, SyntaxKind::IdentTypeSpec);
-    while p.at(SyntaxKind::OpenBracket) {
-        let m = c.precede(p);
-        p.bump();
-        p.expect(SyntaxKind::CloseBracket);
-        c = m.complete(p, SyntaxKind::ArrayTypeSpec);
+    loop {
+        match p.current() {
+            SyntaxKind::OpenBracket => {
+                let m = c.precede(p);
+                p.bump();
+                p.expect(SyntaxKind::CloseBracket);
+                c = m.complete(p, SyntaxKind::ArrayTypeSpec);
+            },
+            SyntaxKind::Question => {
+                let m = c.precede(p);
+                p.bump();
+                c = m.complete(p, SyntaxKind::OptionTypeSpec);
+            },
+            _ => break
+        }
     }
     c
 }
@@ -347,5 +357,10 @@ mod tests {
     #[test]
     fn block_expr() {
         insta::assert_debug_snapshot!(parse("{1} + {2};"));
+    }
+
+    #[test]
+    fn type_spec() {
+        insta::assert_debug_snapshot!(parse("let a: int[]? = 0;"));
     }
 }

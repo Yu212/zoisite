@@ -10,6 +10,7 @@ pub enum Type {
     Str,
     Char,
     Array(Box<Type>),
+    Option(Box<Type>),
     Invalid,
 }
 
@@ -22,6 +23,7 @@ impl Type {
             Type::Str => Some(ctx.i8_type().ptr_type(AddressSpace::default()).into()),
             Type::Char => Some(ctx.i8_type().into()),
             Type::Array(inner_ty) => Some(inner_ty.llvm_ty(ctx)?.ptr_type(AddressSpace::default()).into()),
+            Type::Option(inner_ty) => Some(inner_ty.llvm_ty(ctx)?.ptr_type(AddressSpace::default()).into()),
             Type::Invalid => None,
         }
     }
@@ -29,6 +31,7 @@ impl Type {
         match self {
             Type::Str => Some(Type::Char),
             Type::Array(inner_ty) => Some(*inner_ty.clone()),
+            Type::Option(inner_ty) => Some(*inner_ty.clone()),
             _ => None,
         }
     }

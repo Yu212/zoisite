@@ -63,6 +63,7 @@ impl<'a> Lexer<'a> {
             Some(',') => SyntaxKind::Comma,
             Some(':') => SyntaxKind::Colon,
             Some(';') => SyntaxKind::Semicolon,
+            Some('?') => SyntaxKind::Question,
             Some('=') => SyntaxKind::Equals,
             Some('+') => SyntaxKind::Plus,
             Some('-') => SyntaxKind::Minus,
