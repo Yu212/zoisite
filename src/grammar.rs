@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn func_def() {
-        insta::assert_debug_snapshot!(parse("fun f(n: int): int { 1; }"));
+        insta::assert_debug_snapshot!(parse("fun f(n: int): int { 1 }"));
     }
 
     #[test]
@@ -346,6 +346,6 @@ mod tests {
 
     #[test]
     fn block_expr() {
-        insta::assert_debug_snapshot!(parse("{1;} + {2;};"));
+        insta::assert_debug_snapshot!(parse("{1} + {2};"));
     }
 }

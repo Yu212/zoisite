@@ -4,7 +4,7 @@ expression: "parse(\"1 + 2 * 3;\")"
 ---
 (
     Root@0..10
-      ExprStmt@0..10
+      ExprStmt@0..9
         BinaryExpr@0..9
           NumberLiteral@0..2
             Number@0..1 "1"
@@ -19,7 +19,7 @@ expression: "parse(\"1 + 2 * 3;\")"
             Whitespace@7..8 " "
             NumberLiteral@8..9
               Number@8..9 "3"
-        Semicolon@9..10 ";"
+      Semicolon@9..10 ";"
     ,
     [],
 )

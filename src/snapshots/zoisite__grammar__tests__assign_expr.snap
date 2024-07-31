@@ -4,7 +4,7 @@ expression: "parse(\"a = b[0] = 1;\")"
 ---
 (
     Root@0..13
-      ExprStmt@0..13
+      ExprStmt@0..12
         BinaryExpr@0..12
           RefExpr@0..2
             Ident@0..1 "a"
@@ -24,7 +24,7 @@ expression: "parse(\"a = b[0] = 1;\")"
             Whitespace@10..11 " "
             NumberLiteral@11..12
               Number@11..12 "1"
-        Semicolon@12..13 ";"
+      Semicolon@12..13 ";"
     ,
     [],
 )

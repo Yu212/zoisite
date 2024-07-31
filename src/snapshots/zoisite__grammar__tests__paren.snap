@@ -4,7 +4,7 @@ expression: "parse(\"(1 + 2) * 3;\")"
 ---
 (
     Root@0..12
-      ExprStmt@0..12
+      ExprStmt@0..11
         BinaryExpr@0..11
           ParenExpr@0..8
             OpenParen@0..1 "("
@@ -22,7 +22,7 @@ expression: "parse(\"(1 + 2) * 3;\")"
           Whitespace@9..10 " "
           NumberLiteral@10..11
             Number@10..11 "3"
-        Semicolon@11..12 ";"
+      Semicolon@11..12 ";"
     ,
     [],
 )

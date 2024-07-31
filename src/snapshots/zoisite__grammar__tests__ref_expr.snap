@@ -4,7 +4,7 @@ expression: "parse(\"a + bc;\")"
 ---
 (
     Root@0..7
-      ExprStmt@0..7
+      ExprStmt@0..6
         BinaryExpr@0..6
           RefExpr@0..2
             Ident@0..1 "a"
@@ -13,7 +13,7 @@ expression: "parse(\"a + bc;\")"
           Whitespace@3..4 " "
           RefExpr@4..6
             Ident@4..6 "bc"
-        Semicolon@6..7 ";"
+      Semicolon@6..7 ";"
     ,
     [],
 )

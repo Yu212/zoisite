@@ -4,7 +4,7 @@ expression: "parse(\"let a: int = 1;\")"
 ---
 (
     Root@0..15
-      LetStmt@0..15
+      LetStmt@0..14
         LetKw@0..3 "let"
         Whitespace@3..4 " "
         TypedIdent@4..11
@@ -18,7 +18,7 @@ expression: "parse(\"let a: int = 1;\")"
         Whitespace@12..13 " "
         NumberLiteral@13..14
           Number@13..14 "1"
-        Semicolon@14..15 ";"
+      Semicolon@14..15 ";"
     ,
     [],
 )

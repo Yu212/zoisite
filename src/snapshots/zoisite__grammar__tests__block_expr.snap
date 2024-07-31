@@ -1,29 +1,27 @@
 ---
 source: src/grammar.rs
-expression: "parse(\"{1;} + {2;};\")"
+expression: "parse(\"{1} + {2};\")"
 ---
 (
-    Root@0..12
-      ExprStmt@0..12
-        BinaryExpr@0..11
-          BlockExpr@0..5
+    Root@0..10
+      ExprStmt@0..9
+        BinaryExpr@0..9
+          BlockExpr@0..4
             OpenBrace@0..1 "{"
-            ExprStmt@1..3
+            ExprStmt@1..2
               NumberLiteral@1..2
                 Number@1..2 "1"
-              Semicolon@2..3 ";"
-            CloseBrace@3..4 "}"
-            Whitespace@4..5 " "
-          Plus@5..6 "+"
-          Whitespace@6..7 " "
-          BlockExpr@7..11
-            OpenBrace@7..8 "{"
-            ExprStmt@8..10
-              NumberLiteral@8..9
-                Number@8..9 "2"
-              Semicolon@9..10 ";"
-            CloseBrace@10..11 "}"
-        Semicolon@11..12 ";"
+            CloseBrace@2..3 "}"
+            Whitespace@3..4 " "
+          Plus@4..5 "+"
+          Whitespace@5..6 " "
+          BlockExpr@6..9
+            OpenBrace@6..7 "{"
+            ExprStmt@7..8
+              NumberLiteral@7..8
+                Number@7..8 "2"
+            CloseBrace@8..9 "}"
+      Semicolon@9..10 ";"
     ,
     [],
 )
