@@ -10,6 +10,7 @@ pub enum Type {
     Str,
     Char,
     Array(Box<Type>),
+    Tuple(Vec<Type>),
     Option(Box<Type>),
     Invalid,
 }
@@ -23,6 +24,10 @@ impl Type {
             Type::Str => Some(ctx.i8_type().ptr_type(AddressSpace::default()).into()),
             Type::Char => Some(ctx.i8_type().into()),
             Type::Array(inner_ty) => Some(inner_ty.llvm_ty(ctx)?.ptr_type(AddressSpace::default()).into()),
+            Type::Tuple(inner_ty) => {
+                let tys = inner_ty.iter().map(|ty| ty.llvm_ty(ctx)).collect::<Option<Vec<_>>>();
+                Some(ctx.struct_type(tys?.as_slice(), false).into())
+            },
             Type::Option(inner_ty) => Some(inner_ty.llvm_ty(ctx)?.ptr_type(AddressSpace::default()).into()),
             Type::Invalid => None,
         }

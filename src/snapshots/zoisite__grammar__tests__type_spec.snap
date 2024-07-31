@@ -1,29 +1,49 @@
 ---
 source: src/grammar.rs
-expression: "parse(\"let a: int[]? = 0;\")"
+expression: "parse(\"let a: (int[]?, str, (char?, unit)) = 0;\")"
 ---
 (
-    Root@0..18
-      LetStmt@0..17
+    Root@0..40
+      LetStmt@0..39
         LetKw@0..3 "let"
         Whitespace@3..4 " "
-        TypedIdent@4..14
+        TypedIdent@4..36
           Ident@4..5 "a"
           Colon@5..6 ":"
           Whitespace@6..7 " "
-          OptionTypeSpec@7..14
-            ArrayTypeSpec@7..12
-              IdentTypeSpec@7..10
-                Ident@7..10 "int"
-              OpenBracket@10..11 "["
-              CloseBracket@11..12 "]"
-            Question@12..13 "?"
-            Whitespace@13..14 " "
-        Equals@14..15 "="
-        Whitespace@15..16 " "
-        NumberLiteral@16..17
-          Number@16..17 "0"
-      Semicolon@17..18 ";"
+          TupleTypeSpec@7..36
+            OpenParen@7..8 "("
+            OptionTypeSpec@8..14
+              ArrayTypeSpec@8..13
+                IdentTypeSpec@8..11
+                  Ident@8..11 "int"
+                OpenBracket@11..12 "["
+                CloseBracket@12..13 "]"
+              Question@13..14 "?"
+            Comma@14..15 ","
+            Whitespace@15..16 " "
+            IdentTypeSpec@16..19
+              Ident@16..19 "str"
+            Comma@19..20 ","
+            Whitespace@20..21 " "
+            TupleTypeSpec@21..34
+              OpenParen@21..22 "("
+              OptionTypeSpec@22..27
+                IdentTypeSpec@22..26
+                  Ident@22..26 "char"
+                Question@26..27 "?"
+              Comma@27..28 ","
+              Whitespace@28..29 " "
+              IdentTypeSpec@29..33
+                Ident@29..33 "unit"
+              CloseParen@33..34 ")"
+            CloseParen@34..35 ")"
+            Whitespace@35..36 " "
+        Equals@36..37 "="
+        Whitespace@37..38 " "
+        NumberLiteral@38..39
+          Number@38..39 "0"
+      Semicolon@39..40 ";"
     ,
     [],
 )

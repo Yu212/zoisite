@@ -132,6 +132,7 @@ impl Database {
             Some(ast::TypeSpec::IdentTypeSpec(ast)) => self.lower_ident_type(ast),
             Some(ast::TypeSpec::ArrayTypeSpec(ast)) => self.lower_array_type(ast),
             Some(ast::TypeSpec::OptionTypeSpec(ast)) => self.lower_option_type(ast),
+            Some(ast::TypeSpec::TupleTypeSpec(ast)) => self.lower_tuple_type(ast),
             None => Type::Invalid,
         }
     }
@@ -152,6 +153,9 @@ impl Database {
     pub fn lower_option_type(&mut self, ast: ast::OptionTypeSpec) -> Type {
         let inner_ty = self.lower_type(ast.inner_ty());
         Type::Option(Box::new(inner_ty))
+    }
+    pub fn lower_tuple_type(&mut self, ast: ast::TupleTypeSpec) -> Type {
+        Type::Tuple(ast.inner_tys().map(|inner_ty| self.lower_type(Some(inner_ty))).collect::<Vec<_>>())
     }
     pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> Expr {
         match ast {

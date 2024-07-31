@@ -78,27 +78,45 @@ pub fn typed_ident(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::TypedIdent)
 }
 
-pub fn type_spec(p: &mut Parser<'_>) -> CompletedMarker {
-    let m = p.start();
-    p.expect(SyntaxKind::Ident);
-    let mut c = m.complete(p, SyntaxKind::IdentTypeSpec);
-    loop {
-        match p.current() {
-            SyntaxKind::OpenBracket => {
-                let m = c.precede(p);
-                p.bump();
-                p.expect(SyntaxKind::CloseBracket);
-                c = m.complete(p, SyntaxKind::ArrayTypeSpec);
-            },
-            SyntaxKind::Question => {
-                let m = c.precede(p);
-                p.bump();
-                c = m.complete(p, SyntaxKind::OptionTypeSpec);
-            },
-            _ => break
+pub fn type_spec(p: &mut Parser<'_>) -> Option<CompletedMarker> {
+    match p.current() {
+        SyntaxKind::OpenParen => {
+            let m = p.start();
+            p.bump();
+            type_spec(p);
+            while p.eat(SyntaxKind::Comma) {
+                type_spec(p);
+            }
+            p.expect(SyntaxKind::CloseParen);
+            Some(m.complete(p, SyntaxKind::TupleTypeSpec))
+        },
+        SyntaxKind::Ident => {
+            let m = p.start();
+            p.expect(SyntaxKind::Ident);
+            let mut c = m.complete(p, SyntaxKind::IdentTypeSpec);
+            loop {
+                match p.current() {
+                    SyntaxKind::OpenBracket => {
+                        let m = c.precede(p);
+                        p.bump();
+                        p.expect(SyntaxKind::CloseBracket);
+                        c = m.complete(p, SyntaxKind::ArrayTypeSpec);
+                    },
+                    SyntaxKind::Question => {
+                        let m = c.precede(p);
+                        p.bump();
+                        c = m.complete(p, SyntaxKind::OptionTypeSpec);
+                    },
+                    _ => break
+                }
+            }
+            Some(c)
+        },
+        _ => {
+            p.error_and_recover(&[SyntaxKind::OpenParen, SyntaxKind::Ident], &RECOVERY_SET);
+            None
         }
     }
-    c
 }
 
 pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
@@ -361,6 +379,6 @@ mod tests {
 
     #[test]
     fn type_spec() {
-        insta::assert_debug_snapshot!(parse("let a: int[]? = 0;"));
+        insta::assert_debug_snapshot!(parse("let a: (int[]?, str, (char?, unit)) = 0;"));
     }
 }

@@ -22,6 +22,7 @@ pub enum SyntaxKind {
     IdentTypeSpec,
     ArrayTypeSpec,
     OptionTypeSpec,
+    TupleTypeSpec,
     LetKw,
     IfKw,
     ElseKw,

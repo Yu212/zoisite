@@ -87,6 +87,7 @@ asts! {
         IdentTypeSpec,
         ArrayTypeSpec,
         OptionTypeSpec,
+        TupleTypeSpec,
     ];
     Expr [
         BinaryExpr,
@@ -182,6 +183,12 @@ impl ArrayTypeSpec {
 impl OptionTypeSpec {
     pub fn inner_ty(&self) -> Option<TypeSpec> {
         self.0.children().find_map(TypeSpec::cast)
+    }
+}
+
+impl TupleTypeSpec {
+    pub fn inner_tys(&self) -> impl Iterator<Item = TypeSpec> {
+        self.0.children().filter_map(TypeSpec::cast)
     }
 }
 
