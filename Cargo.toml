@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 llvm-sys = "160"
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm16-0"] }
+inkwell = { version = "0.4.0", features = ["llvm16-0"] }
 rowan = "0.15.15"
 unscanny = "0.1.0"
 drop_bomb = "0.1.5"
