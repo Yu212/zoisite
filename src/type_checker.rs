@@ -77,6 +77,10 @@ impl Visitor for TypeChecker<'_> {
                     Type::Unit
                 }
             }
+            Expr::Tuple { elements, range: _ } => {
+                let elements_ty = elements.iter().map(|&expr| self.expr_ty(expr)).collect();
+                Type::Tuple(elements_ty)
+            }
             Expr::If { cond, then_expr, else_expr, range } => {
                 let cond_ty = self.expr_ty(cond);
                 if cond_ty != Type::Bool {

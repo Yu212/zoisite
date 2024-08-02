@@ -84,6 +84,8 @@ pub fn type_spec(p: &mut Parser<'_>) -> Option<CompletedMarker> {
             let m = p.start();
             p.bump();
             type_spec(p);
+            p.expect(SyntaxKind::Comma);
+            type_spec(p);
             while p.eat(SyntaxKind::Comma) {
                 type_spec(p);
             }
@@ -216,8 +218,17 @@ pub fn paren_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     expr(p, 0);
+    let mut comma = false;
+    while p.eat(SyntaxKind::Comma) {
+        expr(p, 0);
+        comma = true;
+    }
     p.expect(SyntaxKind::CloseParen);
-    m.complete(p, SyntaxKind::ParenExpr)
+    if comma {
+        m.complete(p, SyntaxKind::TupleExpr)
+    } else {
+        m.complete(p, SyntaxKind::ParenExpr)
+    }
 }
 
 pub fn ref_expr(p: &mut Parser<'_>) -> CompletedMarker {

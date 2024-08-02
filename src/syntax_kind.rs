@@ -54,6 +54,7 @@ pub enum SyntaxKind {
     BinaryExpr,
     PrefixExpr,
     ParenExpr,
+    TupleExpr,
     RefExpr,
     IfExpr,
     FnCallExpr,

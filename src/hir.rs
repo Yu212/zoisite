@@ -68,6 +68,10 @@ pub enum Expr {
         var_id: Option<VarId>,
         range: TextRange,
     },
+    Tuple {
+        elements: Vec<ExprIdx>,
+        range: TextRange,
+    },
     If {
         cond: ExprIdx,
         then_expr: ExprIdx,

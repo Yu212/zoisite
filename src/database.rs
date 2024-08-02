@@ -162,6 +162,7 @@ impl Database {
             Some(ast::Expr::BinaryExpr(ast)) => self.lower_binary_expr(ast),
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
             Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
+            Some(ast::Expr::TupleExpr(ast)) => self.lower_tuple_expr(ast),
             Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
             Some(ast::Expr::IfExpr(ast)) => self.lower_if_expr(ast),
             Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
@@ -215,6 +216,16 @@ impl Database {
         Expr::Unary {
             op: UnaryOp::Neg,
             expr: self.exprs.alloc(expr),
+            range: ast.syntax().text_range(),
+        }
+    }
+    pub fn lower_tuple_expr(&mut self, ast: ast::TupleExpr) -> Expr {
+        let elements: Vec<_> = ast.elements().map(|expr| {
+            let temp = self.lower_expr(Some(expr));
+            self.exprs.alloc(temp)
+        }).collect();
+        Expr::Tuple {
+            elements,
             range: ast.syntax().text_range(),
         }
     }

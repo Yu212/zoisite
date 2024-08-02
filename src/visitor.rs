@@ -64,6 +64,11 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, node: Expr) {
             visitor.visit_expr_idx(expr);
         }
         Expr::Ref { var_id: _, range: _ } => {}
+        Expr::Tuple { elements, range: _ } => {
+            for element in elements {
+                visitor.visit_expr_idx(element);
+            }
+        }
         Expr::If { cond, then_expr, else_expr, range: _ } => {
             visitor.visit_expr_idx(cond);
             visitor.visit_expr_idx(then_expr);

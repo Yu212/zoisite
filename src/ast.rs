@@ -93,6 +93,7 @@ asts! {
         BinaryExpr,
         PrefixExpr,
         ParenExpr,
+        TupleExpr,
         RefExpr,
         IfExpr,
         FnCallExpr,
@@ -223,6 +224,12 @@ impl PrefixExpr {
 impl ParenExpr {
     pub fn expr(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl TupleExpr {
+    pub fn elements(&self) -> impl Iterator<Item = Expr> {
+        self.0.children().filter_map(Expr::cast)
     }
 }
 

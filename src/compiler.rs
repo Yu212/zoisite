@@ -9,7 +9,7 @@ use inkwell::types::BasicType;
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 
 use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, Func, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
 use crate::r#type::Type;
 use crate::scope::{FnId, VarId};
 use crate::type_checker::TypeChecker;
@@ -154,7 +154,7 @@ impl<'ctx> Compiler<'ctx> {
                 let i8_type = self.context.i8_type();
                 let var = self.db.resolve_ctx.get_var(var_id);
                 let addr = self.builder.build_alloca(ty, var.name.as_str()).ok()?;
-                let val = self.compile_expr(self.db.exprs[expr].clone())?;
+                let val = self.compile_expr_idx(expr)?;
                 self.builder.build_store(addr, val).ok()?;
                 self.addresses.insert(var_id, addr);
                 Some(i8_type.const_int(0, false).into())
@@ -168,12 +168,12 @@ impl<'ctx> Compiler<'ctx> {
 
                 self.builder.build_unconditional_branch(cond_block).ok()?;
                 self.builder.position_at_end(cond_block);
-                let cond_val = self.compile_expr(self.db.exprs[cond].clone())?.into_int_value();
+                let cond_val = self.compile_expr_idx(cond)?.into_int_value();
                 self.builder.build_conditional_branch(cond_val, loop_block, after_block).ok()?;
 
                 self.builder.position_at_end(loop_block);
                 self.loop_stack.push((cond_block, after_block));
-                self.compile_expr(self.db.exprs[block].clone())?;
+                self.compile_expr_idx(block)?;
                 self.loop_stack.pop();
                 self.builder.build_unconditional_branch(cond_block).ok()?;
 
@@ -190,7 +190,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(i8_type.const_int(0, false).into())
             },
             Stmt::ExprStmt { expr, range: _ } => {
-                self.compile_expr(self.db.exprs[expr].clone())
+                self.compile_expr_idx(expr)
             },
             Stmt::FuncDef { func: _, range: _ } => {
                 let i8_type = self.context.i8_type();
@@ -214,7 +214,7 @@ impl<'ctx> Compiler<'ctx> {
                 self.builder.build_store(addr, param).ok().unwrap();
                 self.addresses.insert(var_id, addr);
             }
-            let ret = self.compile_expr(self.db.exprs[func.block].clone()).unwrap();
+            let ret = self.compile_expr_idx(func.block).unwrap();
             self.builder.build_return(Some(&ret)).unwrap();
         }
     }
@@ -229,25 +229,28 @@ impl<'ctx> Compiler<'ctx> {
                 let main_ty = main_ty.llvm_ty(self.context).unwrap();
                 let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
                 let main_val = self.builder.build_load(main_ty, lvalue, "tmp").ok()?.into_pointer_value();
-                let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
+                let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
                 let ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
                 Some(ptr)
             },
             _ => unreachable!()
         }
     }
-    fn compile_expr(&mut self, expr: Expr) -> Option<BasicValueEnum<'ctx>> {
+    fn compile_expr_idx(&mut self, idx: ExprIdx) -> Option<BasicValueEnum<'ctx>> {
+        self.compile_expr(idx, self.db.exprs[idx].clone())
+    }
+    fn compile_expr(&mut self, idx: ExprIdx, expr: Expr) -> Option<BasicValueEnum<'ctx>> {
         match expr {
             Expr::Missing => None,
             Expr::Binary { op, lhs, rhs, range: _ } => {
                 if let BinaryOp::Assign = op {
                     let ptr = self.compile_lvalue(self.db.exprs[lhs].clone())?;
-                    let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?;
+                    let rhs_value = self.compile_expr_idx(rhs)?;
                     self.builder.build_store(ptr, rhs_value).ok()?;
                     return Some(rhs_value);
                 }
-                let lhs_value = self.compile_expr(self.db.exprs[lhs].clone())?.into_int_value();
-                let rhs_value = self.compile_expr(self.db.exprs[rhs].clone())?.into_int_value();
+                let lhs_value = self.compile_expr_idx(lhs)?.into_int_value();
+                let rhs_value = self.compile_expr_idx(rhs)?.into_int_value();
                 let int_ret = match op {
                     BinaryOp::Add => self.builder.build_int_add(lhs_value, rhs_value, "add").ok(),
                     BinaryOp::Sub => self.builder.build_int_sub(lhs_value, rhs_value, "sub").ok(),
@@ -265,7 +268,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(int_ret?.into())
             },
             Expr::Unary { op, expr, range: _ } => {
-                let expr_value = self.compile_expr(self.db.exprs[expr].clone())?.into_int_value();
+                let expr_value = self.compile_expr_idx(expr)?.into_int_value();
                 let int_ret = match op {
                     UnaryOp::Neg => self.builder.build_int_neg(expr_value, "neg").ok(),
                 };
@@ -278,9 +281,19 @@ impl<'ctx> Compiler<'ctx> {
                 let ptr = self.addresses[&var_id];
                 self.builder.build_load(ty, ptr, "tmp").ok()
             },
+            Expr::Tuple { elements, range: _ } => {
+                let struct_ty = self.type_checker.expr_ty(idx).llvm_ty(self.context)?;
+                let val = self.builder.build_malloc(struct_ty, "val").ok()?;
+                for (i, &expr) in elements.iter().enumerate() {
+                    let ptr = self.builder.build_struct_gep(struct_ty, val, i as u32, "tmp").ok()?;
+                    let element = self.compile_expr_idx(expr)?;
+                    self.builder.build_store(ptr, element).ok()?;
+                }
+                Some(val.into())
+            },
             Expr::If { cond, then_expr, else_expr, range: _ } => {
                 let i8_type = self.context.i8_type();
-                let cond_val = self.compile_expr(self.db.exprs[cond].clone())?.into_int_value();
+                let cond_val = self.compile_expr_idx(cond)?.into_int_value();
                 let cur_func = self.cur_function.unwrap();
                 let then_block = self.context.append_basic_block(cur_func, "then");
                 let else_block = self.context.append_basic_block(cur_func, "else");
@@ -288,13 +301,13 @@ impl<'ctx> Compiler<'ctx> {
                 self.builder.build_conditional_branch(cond_val, then_block, else_block).ok()?;
 
                 self.builder.position_at_end(then_block);
-                let then_val = self.compile_expr(self.db.exprs[then_expr].clone())?;
+                let then_val = self.compile_expr_idx(then_expr)?;
                 self.builder.build_unconditional_branch(merge_block).ok()?;
                 let then_block = self.builder.get_insert_block()?;
 
                 self.builder.position_at_end(else_block);
                 let else_val = if let Some(else_expr) = else_expr {
-                    self.compile_expr(self.db.exprs[else_expr].clone())?
+                    self.compile_expr_idx(else_expr)?
                 } else {
                     i8_type.const_int(0, false).into()
                 };
@@ -310,7 +323,7 @@ impl<'ctx> Compiler<'ctx> {
                 let fn_id = fn_id?;
                 let function = self.functions[&fn_id];
                 let args: Vec<_> = args.iter()
-                    .filter_map(|&expr| self.compile_expr(self.db.exprs[expr].clone()))
+                    .filter_map(|&expr| self.compile_expr_idx(expr))
                     .map(|expr| BasicMetadataValueEnum::from(expr))
                     .collect();
                 let call_site = self.builder.build_call(function, &*args, "tmp").ok()?;
@@ -320,8 +333,8 @@ impl<'ctx> Compiler<'ctx> {
             Expr::Index { main_expr, index_expr, range: _ } => {
                 let main_ty = &self.type_checker.expr_ty(main_expr);
                 let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
-                let main_val = self.compile_expr(self.db.exprs[main_expr].clone())?.into_pointer_value();
-                let index_val = self.compile_expr(self.db.exprs[index_expr].clone())?.into_int_value();
+                let main_val = self.compile_expr_idx(main_expr)?.into_pointer_value();
+                let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
                 let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr").ok()? };
                 Some(self.builder.build_load(inner_ty, val_ptr, "tmp").ok()?.into())
             },
@@ -345,8 +358,8 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::ArrayLiteral { len, initial, range: _ } => {
                 let i64_type = self.context.i64_type();
-                let len_val = self.compile_expr(self.db.exprs[len].clone())?.into_int_value();
-                let initial_val = self.compile_expr(self.db.exprs[initial].clone())?;
+                let len_val = self.compile_expr_idx(len)?.into_int_value();
+                let initial_val = self.compile_expr_idx(initial)?;
                 let array = self.builder.build_array_malloc(initial_val.get_type(), len_val, "array").ok()?;
 
                 let cur_func = self.cur_function.unwrap();
