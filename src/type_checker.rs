@@ -5,7 +5,7 @@ use rowan::TextRange;
 
 use crate::database::Database;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
-use crate::hir::{BinaryOp, Expr, ExprIdx, Root, Stmt, StmtIdx};
+use crate::hir::{BinaryOp, Expr, ExprIdx, Root, Stmt, StmtIdx, UnaryOp};
 use crate::r#type::Type;
 use crate::visitor::{Visitor, walk_expr_idx, walk_stmt_idx};
 
@@ -68,7 +68,19 @@ impl Visitor for TypeChecker<'_> {
                     }
                 }
             }
-            Expr::Unary { op: _, expr, range: _ } => self.expr_ty(expr),
+            Expr::Unary { op, expr, range } => {
+                let expr = self.expr_ty(expr);
+                let matched = match op {
+                    UnaryOp::Neg => expr == Type::Int,
+                };
+                if !matched {
+                    self.mismatched(range)
+                } else {
+                    match op {
+                        UnaryOp::Neg => Type::Int,
+                    }
+                }
+            },
             Expr::Ref { var_id, range: _ } => {
                 if let Some(var_id) = var_id {
                     let var = self.db.resolve_ctx.get_var(var_id);
