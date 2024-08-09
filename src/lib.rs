@@ -1,3 +1,4 @@
+use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::ops::Index;
@@ -108,7 +109,15 @@ pub fn compile(text: &str) {
     optimize(&module);
     println!("optimized: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
+    generate_submission_file(text, &module);
     run_llvm_ir();
+}
+
+pub fn generate_submission_file(text: &str, module: &Module) {
+    let template = fs::read_to_string("./files/submission_template.ll").unwrap();
+    let mut submission_file = File::create("./files/submission.ll").unwrap();
+    let commented_out = text.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
+    submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", &module.to_string()).as_bytes());
 }
 
 pub fn run_llvm_ir() {
