@@ -12,7 +12,7 @@ use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
 use crate::r#type::Type;
 use crate::scope::{FnId, VarId};
-use crate::type_checker::TypeChecker;
+use crate::type_infer::TypeInfer;
 
 pub struct Compiler<'ctx> {
     pub db: &'ctx Database,
@@ -23,11 +23,11 @@ pub struct Compiler<'ctx> {
     pub functions: HashMap<FnId, FunctionValue<'ctx>>,
     pub cur_function: Option<FunctionValue<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>,
-    pub type_checker: TypeChecker<'ctx>,
+    pub type_infer: TypeInfer<'ctx>,
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn new(context: &'ctx Context, db: &'ctx Database, type_checker: TypeChecker<'ctx>, module_name: &str) -> Self {
+    pub fn new(context: &'ctx Context, db: &'ctx Database, type_infer: TypeInfer<'ctx>, module_name: &str) -> Self {
         let module = context.create_module(module_name);
         let builder = context.create_builder();
         Self {
@@ -39,7 +39,7 @@ impl<'ctx> Compiler<'ctx> {
             functions: HashMap::new(),
             cur_function: None,
             loop_stack: Vec::new(),
-            type_checker,
+            type_infer,
         }
     }
     pub fn compile(mut self, root: &Root) -> Module<'ctx> {
@@ -150,7 +150,7 @@ impl<'ctx> Compiler<'ctx> {
             Stmt::LetStmt { var_id, expr, range: _ } => {
                 let var_id = var_id?;
                 let var_info = self.db.resolve_ctx.get_var(var_id);
-                let ty = var_info.ty.llvm_ty(self.context).unwrap();
+                let ty = var_info.ty.borrow().llvm_ty(self.context).unwrap();
                 let i8_type = self.context.i8_type();
                 let var = self.db.resolve_ctx.get_var(var_id);
                 let addr = self.builder.build_alloca(ty, var.name.as_str()).ok()?;
@@ -224,7 +224,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(self.addresses[&var_id?])
             },
             Expr::Index { main_expr, index_expr, range: _ } => {
-                let main_ty = &self.type_checker.expr_ty(main_expr);
+                let main_ty = &self.type_infer.expr_ty(main_expr);
                 let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
                 let main_ty = main_ty.llvm_ty(self.context).unwrap();
                 let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
@@ -277,12 +277,12 @@ impl<'ctx> Compiler<'ctx> {
             Expr::Ref { var_id, range: _ } => {
                 let var_id = var_id?;
                 let var_info = self.db.resolve_ctx.get_var(var_id);
-                let ty = var_info.ty.llvm_ty(self.context).unwrap();
+                let ty = var_info.ty.borrow().llvm_ty(self.context).unwrap();
                 let ptr = self.addresses[&var_id];
                 self.builder.build_load(ty, ptr, "tmp").ok()
             },
             Expr::Tuple { elements, range: _ } => {
-                let struct_ty = self.type_checker.expr_ty(idx).llvm_ty(self.context)?;
+                let struct_ty = self.type_infer.expr_ty(idx).llvm_ty(self.context)?;
                 let val = self.builder.build_malloc(struct_ty, "val").ok()?;
                 for (i, &expr) in elements.iter().enumerate() {
                     let ptr = self.builder.build_struct_gep(struct_ty, val, i as u32, "tmp").ok()?;
@@ -331,7 +331,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(ret_val)
             },
             Expr::Index { main_expr, index_expr, range: _ } => {
-                let main_ty = &self.type_checker.expr_ty(main_expr);
+                let main_ty = &self.type_infer.expr_ty(main_expr);
                 let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
                 let main_val = self.compile_expr_idx(main_expr)?.into_pointer_value();
                 let index_val = self.compile_expr_idx(index_expr)?.into_int_value();

@@ -1,5 +1,6 @@
 use rowan::TextRange;
 
+use crate::r#type::Type;
 use crate::syntax_kind::SyntaxKind;
 
 #[derive(Debug)]
@@ -30,5 +31,8 @@ pub enum DiagnosticKind {
     InvalidType,
     InvalidLhs,
     BreakOutsideLoop,
-    TypeUnmatched,
+    TypeMismatched {
+        ty1: Type,
+        ty2: Type,
+    },
 }

@@ -70,11 +70,17 @@ pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::ExprStmt)
 }
 
-pub fn typed_ident(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn typed_ident(p: &mut Parser<'_>, optional: bool) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::Ident);
-    p.expect(SyntaxKind::Colon);
-    type_spec(p);
+    if optional {
+        if p.eat(SyntaxKind::Colon) {
+            type_spec(p);
+        }
+    } else {
+        p.expect(SyntaxKind::Colon);
+        type_spec(p);
+    }
     m.complete(p, SyntaxKind::TypedIdent)
 }
 
@@ -125,9 +131,9 @@ pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::OpenParen);
     if !p.at(SyntaxKind::CloseParen) {
-        typed_ident(p);
+        typed_ident(p, false);
         while p.eat(SyntaxKind::Comma) {
-            typed_ident(p);
+            typed_ident(p, false);
         }
     }
     p.expect(SyntaxKind::CloseParen);
@@ -138,7 +144,7 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::LetKw));
     let m = p.start();
     p.bump();
-    typed_ident(p);
+    typed_ident(p, true);
     p.expect(SyntaxKind::Equals);
     expr(p, 0);
     m.complete(p, SyntaxKind::LetStmt)

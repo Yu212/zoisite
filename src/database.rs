@@ -54,7 +54,7 @@ impl Database {
             .collect();
         let return_ty = self.lower_type(ast.return_ty());
         let params: Vec<_> = params.iter().zip(params_ty)
-            .map(|(ident, ty)| self.resolve_ctx.define_var(ident.name.clone(), ty))
+            .map(|(ident, ty)| self.resolve_ctx.define_var(ident.name.clone(), Some(ty)))
             .collect();
         let name = self.lower_ident(ast.name()).map(|ident| ident.name);
         let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), params, return_ty));
@@ -88,7 +88,7 @@ impl Database {
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
         let name = self.lower_ident(ast.name());
-        let ty = self.lower_type(ast.type_spec());
+        let ty = ast.type_spec().map(|type_spec| self.lower_type(Some(type_spec)));
         let var_id = if let Some(name) = name {
             Some(self.resolve_ctx.define_var(name.name.clone(), ty))
         } else {

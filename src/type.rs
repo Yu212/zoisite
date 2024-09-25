@@ -2,7 +2,7 @@ use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{BasicType, BasicTypeEnum};
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Type {
     Unit,
     Int,

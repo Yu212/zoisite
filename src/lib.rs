@@ -18,7 +18,7 @@ use crate::compiler::Compiler;
 use crate::database::Database;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
-use crate::type_checker::TypeChecker;
+use crate::type_infer::TypeInfer;
 
 pub mod parser;
 pub mod grammar;
@@ -35,7 +35,7 @@ pub mod database;
 pub mod token_set;
 pub mod resolve_context;
 pub mod scope;
-pub mod type_checker;
+pub mod type_infer;
 pub mod r#type;
 pub mod visitor;
 
@@ -50,13 +50,13 @@ pub fn compile_no_output(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
-    let mut type_checker = TypeChecker::new(&db);
-    let type_check_errors = type_checker.check(hir.clone());
+    let mut type_infer = TypeInfer::new(&db);
+    let type_check_errors = type_infer.check(hir.clone());
     if !type_check_errors.is_empty() {
         return;
     }
     let context = Context::create();
-    let compiler = Compiler::new(&context, &db, type_checker, "main");
+    let compiler = Compiler::new(&context, &db, type_infer, "main");
     let module = compiler.compile(&hir);
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
     unsafe {
@@ -92,8 +92,8 @@ pub fn compile(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
-    let mut type_checker = TypeChecker::new(&db);
-    let type_check_errors = type_checker.check(hir.clone());
+    let mut type_infer = TypeInfer::new(&db);
+    let type_check_errors = type_infer.check(hir.clone());
     eprintln!("type check errors: ");
     for err in &type_check_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range));
@@ -102,7 +102,7 @@ pub fn compile(text: &str) {
         return;
     }
     let context = Context::create();
-    let compiler = Compiler::new(&context, &db, type_checker, "main");
+    let compiler = Compiler::new(&context, &db, type_infer, "main");
     let module = compiler.compile(&hir);
     println!("compile: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
@@ -117,7 +117,7 @@ pub fn generate_submission_file(text: &str, module: &Module) {
     let template = fs::read_to_string("./files/submission_template.ll").unwrap();
     let mut submission_file = File::create("./files/submission.ll").unwrap();
     let commented_out = text.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
-    submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", &module.to_string()).as_bytes());
+    submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", &module.to_string()).as_bytes()).unwrap();
 }
 
 pub fn run_llvm_ir() {

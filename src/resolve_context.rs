@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::iter;
 
 use ecow::EcoString;
@@ -33,14 +34,15 @@ impl ResolveContext {
         self.define_global_fn(EcoString::from("chr"), vec![EcoString::from("n")], vec![Type::Int], Type::Char);
         self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
     }
-    pub fn define_var(&mut self, name: EcoString, ty: Type) -> VarId {
+    pub fn define_var(&mut self, name: EcoString, ty_hint: Option<Type>) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
         let id = VarId(self.variables.len());
         self.variables.push(VariableInfo {
             name: name.clone(),
             id,
             place: scope.place,
-            ty,
+            ty: RefCell::new(Type::Invalid),
+            ty_hint,
         });
         scope.define_var(name, id);
         id
@@ -51,7 +53,7 @@ impl ResolveContext {
         let place = scope.place;
         let id = FnId(self.functions.len());
         scope.define_fn(name.clone(), params.len(), id);
-        let params_ty = params.iter().map(|&var_id| self.get_var(var_id).ty.clone()).collect();
+        let params_ty = params.iter().map(|&var_id| self.get_var(var_id).ty_hint.clone().unwrap()).collect();
         let fun_info = FuncInfo {
             name,
             id,
@@ -66,7 +68,7 @@ impl ResolveContext {
     pub fn define_global_fn(&mut self, name: EcoString, params: Vec<EcoString>, params_ty: Vec<Type>, return_ty: Type) -> FuncInfo {
         self.push_scope(true);
         let params: Vec<_> = params.iter().zip(params_ty.clone())
-            .map(|(name, ty)| self.define_var(name.clone(), ty))
+            .map(|(name, ty)| self.define_var(name.clone(), Some(ty)))
             .collect();
         self.pop_scope();
         let place = self.global_scope.place;
@@ -129,7 +131,8 @@ pub struct VariableInfo {
     pub name: EcoString,
     pub id: VarId,
     pub place: Place,
-    pub ty: Type,
+    pub ty: RefCell<Type>,
+    pub ty_hint: Option<Type>,
 }
 
 #[derive(Debug, Clone)]
