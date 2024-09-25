@@ -40,6 +40,9 @@ pub enum Stmt {
     BreakStmt {
         range: TextRange,
     },
+    ContinueStmt {
+        range: TextRange,
+    },
     ExprStmt {
         expr: ExprIdx,
         range: TextRange,

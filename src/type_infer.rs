@@ -204,6 +204,7 @@ impl Visitor for TypeInfer<'_> {
             }
             Stmt::WhileStmt { .. } => walk_stmt_idx(self, idx),
             Stmt::BreakStmt { .. } => walk_stmt_idx(self, idx),
+            Stmt::ContinueStmt { .. } => walk_stmt_idx(self, idx),
             Stmt::ExprStmt { .. } => walk_stmt_idx(self, idx),
             Stmt::FuncDef { func, range } => {
                 let func = self.db.funcs[func].clone();

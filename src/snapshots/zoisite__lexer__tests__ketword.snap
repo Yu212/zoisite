@@ -1,6 +1,6 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"let if else while break fun true false\")"
+expression: "tokenize(\"let if else while break continue fun true false\")"
 ---
 (
     [
@@ -55,19 +55,9 @@ expression: "tokenize(\"let if else while break fun true false\")"
             range: 23..24,
         },
         Token {
-            kind: FunKw,
-            text: "fun",
-            range: 24..27,
-        },
-        Token {
-            kind: Whitespace,
-            text: " ",
-            range: 27..28,
-        },
-        Token {
-            kind: TrueKw,
-            text: "true",
-            range: 28..32,
+            kind: ContinueKw,
+            text: "continue",
+            range: 24..32,
         },
         Token {
             kind: Whitespace,
@@ -75,14 +65,34 @@ expression: "tokenize(\"let if else while break fun true false\")"
             range: 32..33,
         },
         Token {
+            kind: FunKw,
+            text: "fun",
+            range: 33..36,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 36..37,
+        },
+        Token {
+            kind: TrueKw,
+            text: "true",
+            range: 37..41,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 41..42,
+        },
+        Token {
             kind: FalseKw,
             text: "false",
-            range: 33..38,
+            range: 42..47,
         },
         Token {
             kind: Eof,
             text: "",
-            range: 38..38,
+            range: 47..47,
         },
     ],
     [],

@@ -28,6 +28,7 @@ pub enum SyntaxKind {
     ElseKw,
     WhileKw,
     BreakKw,
+    ContinueKw,
     FunKw,
     TrueKw,
     FalseKw,
@@ -65,6 +66,7 @@ pub enum SyntaxKind {
     LetStmt,
     WhileStmt,
     BreakStmt,
+    ContinueStmt,
     ExprStmt,
 }
 

@@ -76,6 +76,7 @@ impl Database {
             ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
             ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
             ast::Stmt::BreakStmt(ast) => self.lower_break_stmt(ast),
+            ast::Stmt::ContinueStmt(ast) => self.lower_continue_stmt(ast),
             ast::Stmt::ExprStmt(ast) => self.lower_expr_stmt(ast),
             ast::Stmt::FuncDef(ast) => self.lower_func(ast),
         }
@@ -117,6 +118,15 @@ impl Database {
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::BreakOutsideLoop, range));
         }
         Stmt::BreakStmt {
+            range: ast.syntax().text_range(),
+        }
+    }
+    pub fn lower_continue_stmt(&mut self, ast: ast::ContinueStmt) -> Stmt {
+        if self.loop_nest == 0 {
+            let range = ast.syntax().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::ContinueOutsideLoop, range));
+        }
+        Stmt::ContinueStmt {
             range: ast.syntax().text_range(),
         }
     }

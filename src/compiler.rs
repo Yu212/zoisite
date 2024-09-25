@@ -189,6 +189,15 @@ impl<'ctx> Compiler<'ctx> {
                 self.builder.position_at_end(unreachable_block);
                 Some(i8_type.const_int(0, false).into())
             },
+            Stmt::ContinueStmt { range: _ } => {
+                let i8_type = self.context.i8_type();
+                let cur_func = self.cur_function.unwrap();
+                let unreachable_block = self.context.append_basic_block(cur_func, "unreachable");
+                let &(cond_block, _) = self.loop_stack.last().unwrap();
+                self.builder.build_unconditional_branch(cond_block).ok()?;
+                self.builder.position_at_end(unreachable_block);
+                Some(i8_type.const_int(0, false).into())
+            },
             Stmt::ExprStmt { expr, range: _ } => {
                 self.compile_expr_idx(expr)
             },

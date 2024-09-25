@@ -45,6 +45,7 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, node: Stmt) {
             visitor.visit_expr_idx(block);
         }
         Stmt::BreakStmt { range: _ } => {}
+        Stmt::ContinueStmt { range: _ } => {}
         Stmt::ExprStmt { expr, range: _ } => {
             visitor.visit_expr_idx(expr);
         }

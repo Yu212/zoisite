@@ -24,6 +24,7 @@ pub fn stmt(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
         SyntaxKind::LetKw => (let_stmt(p), true),
         SyntaxKind::WhileKw => (while_stmt(p), true),
         SyntaxKind::BreakKw => (break_stmt(p), true),
+        SyntaxKind::ContinueKw => (continue_stmt(p), true),
         SyntaxKind::FunKw => (func_stmt(p), false),
         _ => (expr_stmt(p), true),
     }
@@ -62,6 +63,13 @@ pub fn break_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::BreakStmt)
+}
+
+pub fn continue_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::ContinueKw));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::ContinueStmt)
 }
 
 pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {

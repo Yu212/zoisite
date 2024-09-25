@@ -31,6 +31,7 @@ pub enum DiagnosticKind {
     InvalidType,
     InvalidLhs,
     BreakOutsideLoop,
+    ContinueOutsideLoop,
     TypeMismatched {
         ty1: Type,
         ty2: Type,

@@ -80,6 +80,7 @@ asts! {
         LetStmt,
         WhileStmt,
         BreakStmt,
+        ContinueStmt,
         ExprStmt,
         FuncDef,
     ];
