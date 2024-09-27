@@ -56,6 +56,8 @@ impl<'a> Lexer<'a> {
             Some('!') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Neq },
             Some('>') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Ge },
             Some('<') if self.s.peek() == Some('=') => { self.s.eat(); SyntaxKind::Le },
+            Some('&') if self.s.peek() == Some('&') => { self.s.eat(); SyntaxKind::And },
+            Some('|') if self.s.peek() == Some('|') => { self.s.eat(); SyntaxKind::Or },
             Some('>') => SyntaxKind::Gt,
             Some('<') => SyntaxKind::Lt,
             Some('/') if self.s.peek() == Some('/') => self.line_comment(),
@@ -149,7 +151,7 @@ mod tests {
 
     #[test]
     fn operator() {
-        insta::assert_debug_snapshot!(tokenize("+ - * / % == != >= <= > <"));
+        insta::assert_debug_snapshot!(tokenize("+ - * / % == != >= <= > < && ||"));
     }
 
     #[test]

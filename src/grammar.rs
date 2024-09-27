@@ -174,6 +174,8 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<CompletedMarker
             SyntaxKind::Le => OpKind::BinaryOp(BinaryOp::Le),
             SyntaxKind::Gt => OpKind::BinaryOp(BinaryOp::Gt),
             SyntaxKind::Lt => OpKind::BinaryOp(BinaryOp::Lt),
+            SyntaxKind::And => OpKind::BinaryOp(BinaryOp::And),
+            SyntaxKind::Or => OpKind::BinaryOp(BinaryOp::Or),
             SyntaxKind::OpenBracket => OpKind::PostfixOp(PostfixOp::Index),
             _ => break,
         };

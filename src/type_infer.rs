@@ -239,11 +239,15 @@ impl Visitor for TypeInfer<'_> {
                     BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt => {
                         self.unify(&lhs_ty, &Typing::Int, &range);
                     },
+                    BinaryOp::And | BinaryOp::Or => {
+                        self.unify(&lhs_ty, &Typing::Bool, &range);
+                    },
                     BinaryOp::Assign => {},
                 };
                 match op {
                     BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => Typing::Int,
                     BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt => Typing::Bool,
+                    BinaryOp::And | BinaryOp::Or => Typing::Bool,
                     BinaryOp::Assign => rhs_ty,
                 }
             }

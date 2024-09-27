@@ -12,6 +12,8 @@ pub enum SyntaxKind {
     Le,
     Gt,
     Lt,
+    And,
+    Or,
     Comma,
     Semicolon,
     Question,

@@ -130,20 +130,22 @@ pub enum OpKind {
 impl OpKind {
     pub fn binding_power(&self) -> (i8, i8) {
         match self {
-            OpKind::BinaryOp(BinaryOp::Add) => (5, 6),
-            OpKind::BinaryOp(BinaryOp::Sub) => (5, 6),
-            OpKind::BinaryOp(BinaryOp::Mul) => (7, 8),
-            OpKind::BinaryOp(BinaryOp::Div) => (7, 8),
-            OpKind::BinaryOp(BinaryOp::Rem) => (7, 8),
+            OpKind::BinaryOp(BinaryOp::Add) => (7, 8),
+            OpKind::BinaryOp(BinaryOp::Sub) => (7, 8),
+            OpKind::BinaryOp(BinaryOp::Mul) => (9, 10),
+            OpKind::BinaryOp(BinaryOp::Div) => (9, 10),
+            OpKind::BinaryOp(BinaryOp::Rem) => (9, 10),
             OpKind::BinaryOp(BinaryOp::Assign) => (2, 1),
-            OpKind::BinaryOp(BinaryOp::EqEq) => (3, 4),
-            OpKind::BinaryOp(BinaryOp::Neq) => (3, 4),
-            OpKind::BinaryOp(BinaryOp::Ge) => (3, 4),
-            OpKind::BinaryOp(BinaryOp::Le) => (3, 4),
-            OpKind::BinaryOp(BinaryOp::Gt) => (3, 4),
-            OpKind::BinaryOp(BinaryOp::Lt) => (3, 4),
-            OpKind::PostfixOp(PostfixOp::Index) => (10, -1),
-            OpKind::UnaryOp(UnaryOp::Neg) => (-1, 9),
+            OpKind::BinaryOp(BinaryOp::EqEq) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Neq) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Ge) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Le) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Gt) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::Lt) => (5, 6),
+            OpKind::BinaryOp(BinaryOp::And) => (3, 4),
+            OpKind::BinaryOp(BinaryOp::Or) => (3, 4),
+            OpKind::PostfixOp(PostfixOp::Index) => (12, -1),
+            OpKind::UnaryOp(UnaryOp::Neg) => (-1, 11),
         }
     }
 }
@@ -162,6 +164,8 @@ pub enum BinaryOp {
     Le,
     Gt,
     Lt,
+    And,
+    Or,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

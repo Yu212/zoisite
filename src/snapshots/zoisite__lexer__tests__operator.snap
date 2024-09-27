@@ -1,6 +1,6 @@
 ---
 source: src/lexer.rs
-expression: "tokenize(\"+ - * / % == != >= <= > <\")"
+expression: "tokenize(\"+ - * / % == != >= <= > < && ||\")"
 ---
 (
     [
@@ -110,9 +110,29 @@ expression: "tokenize(\"+ - * / % == != >= <= > <\")"
             range: 24..25,
         },
         Token {
+            kind: Whitespace,
+            text: " ",
+            range: 25..26,
+        },
+        Token {
+            kind: And,
+            text: "&&",
+            range: 26..28,
+        },
+        Token {
+            kind: Whitespace,
+            text: " ",
+            range: 28..29,
+        },
+        Token {
+            kind: Or,
+            text: "||",
+            range: 29..31,
+        },
+        Token {
             kind: Eof,
             text: "",
-            range: 25..25,
+            range: 31..31,
         },
     ],
     [],

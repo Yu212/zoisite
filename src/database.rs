@@ -206,6 +206,8 @@ impl Database {
             SyntaxKind::Le => BinaryOp::Le,
             SyntaxKind::Gt => BinaryOp::Gt,
             SyntaxKind::Lt => BinaryOp::Lt,
+            SyntaxKind::And => BinaryOp::And,
+            SyntaxKind::Or => BinaryOp::Or,
             _ => unreachable!(),
         };
         let lhs = self.lower_expr(ast.lhs());
