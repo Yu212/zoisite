@@ -323,10 +323,10 @@ impl Database {
         }
     }
     pub fn lower_array_literal(&mut self, ast: ast::ArrayLiteral) -> Expr {
-        let len = self.lower_expr(ast.len());
+        let len: Vec<_> = ast.len().map(|len_expr| self.lower_expr(Some(len_expr))).collect();
         let initial = self.lower_expr(ast.initial());
         Expr::ArrayLiteral {
-            len: self.exprs.alloc(len),
+            len: len.iter().map(|len_expr| self.exprs.alloc(len_expr.clone())).collect(),
             initial: self.exprs.alloc(initial),
             range: ast.syntax().text_range(),
         }

@@ -329,6 +329,9 @@ pub fn array_literal(p: &mut Parser<'_>) -> CompletedMarker {
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
     expr(p, 0);
+    while p.eat(SyntaxKind::Comma) {
+        expr(p, 0);
+    }
     p.expect(SyntaxKind::CloseBracket);
     m.complete(p, SyntaxKind::ArrayLiteral)
 }

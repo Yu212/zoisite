@@ -309,8 +309,8 @@ impl StringLiteral {
 }
 
 impl ArrayLiteral {
-    pub fn len(&self) -> Option<Expr> {
-        self.0.children().filter_map(Expr::cast).nth(1)
+    pub fn len(&self) -> impl Iterator<Item = Expr> {
+        self.0.children().filter_map(Expr::cast).skip(1)
     }
 
     pub fn initial(&self) -> Option<Expr> {

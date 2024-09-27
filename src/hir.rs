@@ -108,7 +108,7 @@ pub enum Expr {
         range: TextRange,
     },
     ArrayLiteral {
-        len: ExprIdx,
+        len: Vec<ExprIdx>,
         initial: ExprIdx,
         range: TextRange,
     },

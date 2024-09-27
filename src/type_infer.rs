@@ -317,10 +317,13 @@ impl Visitor for TypeInfer<'_> {
             Expr::BoolLiteral { val: _, range: _ } => Typing::Bool,
             Expr::StringLiteral { val: _, range: _ } => Typing::Str,
             Expr::ArrayLiteral { len, initial, range } => {
-                let len_ty = self.expr_typing(len);
-                let initial_ty = self.expr_typing(initial);
-                self.unify(&len_ty, &Typing::Int, &range);
-                Typing::Array(Box::new(initial_ty))
+                let mut ty = self.expr_typing(initial);
+                for len_expr in len {
+                    let len_ty = self.expr_typing(len_expr);
+                    self.unify(&len_ty, &Typing::Int, &range);
+                    ty = Typing::Array(Box::new(ty))
+                }
+                ty
             },
         };
         self.expr_tys.insert(idx, ty.clone());

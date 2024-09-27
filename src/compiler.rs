@@ -5,8 +5,8 @@ use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::types::BasicType;
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
+use inkwell::types::{BasicType, BasicTypeEnum};
+use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 
 use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
@@ -367,9 +367,19 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::ArrayLiteral { len, initial, range: _ } => {
                 let i64_type = self.context.i64_type();
-                let len_val = self.compile_expr_idx(len)?.into_int_value();
+
                 let initial_val = self.compile_expr_idx(initial)?;
-                let array = self.builder.build_array_malloc(initial_val.get_type(), len_val, "array").ok()?;
+                let mut len_mul = i64_type.const_int(1, false);
+                let mut arr_types = vec![initial_val.get_type()];
+                let mut len_vals = vec![];
+                for x in len {
+                    let x_val = self.compile_expr_idx(x)?.into_int_value();
+                    len_vals.push(x_val);
+                    len_mul = self.builder.build_int_mul(len_mul, x_val, "tmp").ok()?;
+                    arr_types.push(arr_types.last().unwrap().ptr_type(AddressSpace::default()).into());
+                }
+                arr_types.reverse();
+                let all_array = self.builder.build_array_malloc(initial_val.get_type(), len_mul, "array").ok()?;
 
                 let cur_func = self.cur_function.unwrap();
                 let cond_block = self.context.append_basic_block(cur_func, "loopcond");
@@ -382,12 +392,12 @@ impl<'ctx> Compiler<'ctx> {
 
                 self.builder.position_at_end(cond_block);
                 let idx_val = self.builder.build_load(i64_type, idx_addr, "idx").ok()?.into_int_value();
-                let cond_val = self.builder.build_int_compare(IntPredicate::SLT, idx_val, len_val, "cmp").ok()?;
+                let cond_val = self.builder.build_int_compare(IntPredicate::SLT, idx_val, len_mul, "cmp").ok()?;
                 self.builder.build_conditional_branch(cond_val, loop_block, after_block).ok()?;
 
                 self.builder.position_at_end(loop_block);
                 unsafe {
-                    let val = self.builder.build_in_bounds_gep(initial_val.get_type(), array, &[idx_val], "tmp").ok()?;
+                    let val = self.builder.build_in_bounds_gep(initial_val.get_type(), all_array, &[idx_val], "tmp").ok()?;
                     self.builder.build_store(val, initial_val).ok()?;
                 };
                 let new_idx_val = self.builder.build_int_add(idx_val, i64_type.const_int(1, false), "add").ok()?;
@@ -396,8 +406,48 @@ impl<'ctx> Compiler<'ctx> {
 
                 self.builder.position_at_end(after_block);
 
+                let array = self.array_initializer(0, i64_type.const_int(0, false), len_vals, arr_types, all_array)?;
                 Some(array.into())
             },
         }
+    }
+
+    fn array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> Option<PointerValue<'ctx>> {
+        if i + 1 == len_vals.len() {
+            unsafe {
+                let ptr = self.builder.build_in_bounds_gep(arr_types[0], all_array, &[all_idx_val], "tmp").ok()?;
+                return Some(ptr);
+            }
+        }
+        let i64_type = self.context.i64_type();
+        let array = self.builder.build_array_malloc(arr_types[i], len_vals[i], "array").ok()?;
+
+        let cur_func = self.cur_function.unwrap();
+        let cond_block = self.context.append_basic_block(cur_func, "loopcond");
+        let loop_block = self.context.append_basic_block(cur_func, "loop");
+        let after_block = self.context.append_basic_block(cur_func, "after");
+
+        let idx_addr = self.builder.build_alloca(i64_type, "idx").ok()?;
+        self.builder.build_store(idx_addr, i64_type.const_int(0, false)).ok()?;
+        self.builder.build_unconditional_branch(cond_block).ok()?;
+
+        self.builder.position_at_end(cond_block);
+        let idx_val = self.builder.build_load(i64_type, idx_addr, "idx").ok()?.into_int_value();
+        let cond_val = self.builder.build_int_compare(IntPredicate::SLT, idx_val, len_vals[i], "cmp").ok()?;
+        self.builder.build_conditional_branch(cond_val, loop_block, after_block).ok()?;
+
+        self.builder.position_at_end(loop_block);
+        unsafe {
+            let val = self.array_initializer(i + 1, self.builder.build_int_mul(idx_val, len_vals[i + 1], "tmp").ok()?, len_vals, arr_types, all_array)?;
+            let ptr = self.builder.build_in_bounds_gep(val.get_type(), array, &[idx_val], "tmp").ok()?;
+            self.builder.build_store(ptr, val).ok()?;
+        };
+        let new_idx_val = self.builder.build_int_add(idx_val, i64_type.const_int(1, false), "add").ok()?;
+        self.builder.build_store(idx_addr, new_idx_val).ok()?;
+        self.builder.build_unconditional_branch(cond_block).ok()?;
+
+        self.builder.position_at_end(after_block);
+
+        Some(array)
     }
 }
