@@ -73,6 +73,7 @@ impl TypeInfer<'_> {
         let ty2 = self.substitute(ty2);
         // eprintln!("{:?} {:?} {:?}", ty1, ty2, range);
         match (&ty1, &ty2) {
+            (&Typing::Unknown, _) | (_, &Typing::Unknown) => {},
             (&Typing::TyVar(id1), &Typing::TyVar(id2)) => {
                 if id1 != id2 {
                     self.add_subst(id1, ty2.clone());
