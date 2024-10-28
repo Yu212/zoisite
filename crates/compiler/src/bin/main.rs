@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::Read;
-
 use zoisite::compile;
 
 fn main() {

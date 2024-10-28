@@ -2,4 +2,5 @@
 /files
 /.idea
 /.devcontainer
-
+node_modules/
+out/

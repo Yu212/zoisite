@@ -1,0 +1,9 @@
+[package]
+name = "zoisite-lsp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zoisite = { path = "../compiler" }
+tower-lsp = "0.20.0"
+tokio = { version = "1.41.0", features = ["full"] }
