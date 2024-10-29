@@ -125,7 +125,7 @@ pub fn text_range_to_range(text_range: TextRange, rope: &Rope) -> Range {
 
 pub fn text_size_to_position(text_size: TextSize, rope: &Rope) -> Position {
     let offset = text_size.into();
-    let line = rope.char_to_line(offset);
-    let line_start = rope.line_to_char(line);
+    let line = rope.byte_to_line(offset);
+    let line_start = rope.line_to_byte(line);
     Position::new(line as u32, (offset - line_start) as u32)
 }
