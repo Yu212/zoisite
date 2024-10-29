@@ -244,7 +244,7 @@ impl Database {
     pub fn lower_ref_expr(&mut self, ast: ast::RefExpr) -> Expr {
         let var_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_var(&ident.name));
         if var_id.is_none() {
-            let range = ast.syntax().text_range();
+            let range = ast.ident().map_or(ast.syntax().text_range(), |ident| ident.text_range());
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredVariable, range));
         }
         Expr::Ref {
