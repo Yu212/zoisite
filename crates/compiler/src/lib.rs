@@ -103,7 +103,7 @@ pub fn compile(text: &str) {
     for err in &parser_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range));
     }
-    let mut syntax_file = File::create("./files/output.syntax").unwrap();
+    let mut syntax_file = File::create("output.syntax").unwrap();
     syntax_file.write_all(format!("{:#?}", syntax).as_bytes()).unwrap();
     let root = Root::cast(syntax).unwrap();
     let mut db = Database::new();
@@ -130,31 +130,31 @@ pub fn compile(text: &str) {
     let compiler = Compiler::new(&context, &db, type_infer, "main");
     let module = compiler.compile(&hir);
     println!("compile: {} ms", start.elapsed().as_millis());
-    module.print_to_file(PathBuf::from("./files/output.ll")).expect("print_to_file failed");
+    module.print_to_file(PathBuf::from("output.ll")).expect("print_to_file failed");
     optimize(&module);
     println!("optimized: {} ms", start.elapsed().as_millis());
-    module.print_to_file(PathBuf::from("./files/output_optimized.ll")).expect("print_to_file failed");
+    module.print_to_file(PathBuf::from("output_optimized.ll")).expect("print_to_file failed");
     generate_submission_file(text, &module);
     run_llvm_ir();
 }
 
 pub fn generate_submission_file(text: &str, module: &Module) {
-    let template = fs::read_to_string("./files/submission_template.ll").unwrap();
-    let mut submission_file = File::create("./files/submission.ll").unwrap();
+    let template = fs::read_to_string("submission_template.ll").unwrap();
+    let mut submission_file = File::create("submission.ll").unwrap();
     let commented_out = text.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
     submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", &module.to_string()).as_bytes()).unwrap();
 }
 
 pub fn run_llvm_ir() {
     Command::new("/usr/lib/llvm-16/bin/clang")
-        .current_dir(PathBuf::from("./files/"))
+        .current_dir(PathBuf::from("."))
         .args(vec!["-O2", "-o", "a.out", "output_optimized.ll"])
         .spawn()
         .unwrap()
         .wait()
         .unwrap();
-    Command::new("./files/a.out")
-        .stdin(File::open("./files/input.txt").unwrap())
+    Command::new("./a.out")
+        .stdin(File::open("input.txt").unwrap())
         .spawn()
         .unwrap()
         .wait()
