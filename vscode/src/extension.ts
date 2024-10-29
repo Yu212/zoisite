@@ -1,11 +1,6 @@
 import * as path from "path";
-import { workspace, ExtensionContext } from "vscode";
-import {
-    Executable,
-	LanguageClient,
-	LanguageClientOptions,
-	ServerOptions,
-} from "vscode-languageclient/node";
+import {ExtensionContext, workspace} from "vscode";
+import {Executable, LanguageClient, LanguageClientOptions, ServerOptions} from "vscode-languageclient/node";
 
 let client: LanguageClient;
 

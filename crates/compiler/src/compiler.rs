@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use inkwell::{AddressSpace, IntPredicate};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::{AddressSpace, IntPredicate};
 
 use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};

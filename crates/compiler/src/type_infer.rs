@@ -9,7 +9,7 @@ use crate::hir::{BinaryOp, Expr, ExprIdx, Root, Stmt, StmtIdx, UnaryOp};
 use crate::r#type::Type;
 use crate::resolve_context::VariableInfo;
 use crate::scope::VarId;
-use crate::visitor::{Visitor, walk_expr_idx, walk_stmt_idx};
+use crate::visitor::{walk_expr_idx, walk_stmt_idx, Visitor};
 
 pub struct TypeInfer<'db> {
     pub db: &'db Database,

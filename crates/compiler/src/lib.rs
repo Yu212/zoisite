@@ -6,19 +6,21 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Instant;
 
-use inkwell::context::Context;
-use inkwell::module::Module;
-use inkwell::OptimizationLevel;
-use inkwell::passes::{PassManager, PassManagerBuilder};
-use inkwell::targets::{InitializationConfig, Target};
-use rowan::ast::AstNode;
-
 use crate::ast::Root;
 use crate::compiler::Compiler;
 use crate::database::Database;
+use crate::diagnostic::Diagnostic;
+use crate::language::SyntaxToken;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::type_infer::TypeInfer;
+use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::passes::{PassManager, PassManagerBuilder};
+use inkwell::targets::{InitializationConfig, Target};
+use inkwell::OptimizationLevel;
+use rowan::ast::AstNode;
+use rowan::NodeOrToken;
 
 pub mod parser;
 pub mod grammar;
@@ -38,6 +40,29 @@ pub mod scope;
 pub mod type_infer;
 pub mod r#type;
 pub mod visitor;
+
+pub fn parse(text: &str) -> (Vec<SyntaxToken>, hir::Root, Vec<Diagnostic>) {
+    let lexer = Lexer::new(text);
+    let (tokens, lexer_errors) = lexer.tokenize();
+    let parser = Parser::new(tokens);
+    let (syntax, parser_errors) = parser.parse();
+    let tokens: Vec<_> = syntax.descendants_with_tokens().filter_map(|descendant| match descendant {
+        NodeOrToken::Token(token) => Some(token),
+        _ => None
+    }).collect();
+    let root = Root::cast(syntax).unwrap();
+    let mut db = Database::new();
+    let (hir, lower_errors) = db.lower_root(root);
+    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
+        return (tokens, hir, [lexer_errors, parser_errors, lower_errors].concat());
+    }
+    let mut type_infer = TypeInfer::new(&db);
+    let type_check_errors = type_infer.check(hir.clone());
+    if !type_check_errors.is_empty() {
+        return (tokens, hir, type_check_errors);
+    }
+    (tokens, hir, Vec::new())
+}
 
 pub fn compile_no_output(text: &str) {
     let lexer = Lexer::new(text);

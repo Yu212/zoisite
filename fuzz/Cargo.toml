@@ -12,4 +12,4 @@ path = "fuzz_targets/main.rs"
 
 [dependencies]
 libfuzzer-sys = "0.4.7"
-zoisite = { path = "../compiler" }
+zoisite = { path = "../crates/compiler" }

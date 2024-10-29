@@ -1,6 +1,6 @@
-use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{BasicType, BasicTypeEnum};
+use inkwell::AddressSpace;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Type {

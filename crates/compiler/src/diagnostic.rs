@@ -3,7 +3,7 @@ use rowan::TextRange;
 use crate::r#type::Type;
 use crate::syntax_kind::SyntaxKind;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Diagnostic {
     pub kind: DiagnosticKind,
     pub range: TextRange,
@@ -17,7 +17,7 @@ impl Diagnostic {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DiagnosticKind {
     NumberTooLarge,
     UnterminatedStringLiteral,
