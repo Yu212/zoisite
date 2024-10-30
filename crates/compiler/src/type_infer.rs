@@ -13,7 +13,7 @@ use crate::visitor::{walk_expr_idx, walk_stmt_idx, Visitor};
 
 pub struct TypeInfer<'db> {
     pub db: &'db Database,
-    mismatches: Vec<(Typing, Typing, TextRange)>,
+    diagnostics: Vec<Diagnostic>,
     expr_tys: ArenaMap<ExprIdx, Typing>,
     subst: HashMap<usize, Typing>,
     ty_env: HashMap<VarId, Typing>,
@@ -24,7 +24,7 @@ impl TypeInfer<'_> {
     pub fn new(db: &Database) -> TypeInfer {
         TypeInfer {
             db,
-            mismatches: Vec::new(),
+            diagnostics: Vec::new(),
             expr_tys: ArenaMap::default(),
             subst: Default::default(),
             ty_env: Default::default(),
@@ -42,16 +42,22 @@ impl TypeInfer<'_> {
             }
             var_info.ty.replace(inferred.into());
         }
-        self.mismatches.iter().map(|(ty1, ty2, range)| {
-            Diagnostic::new(DiagnosticKind::TypeMismatched {
-                ty1: self.substitute(ty1).into(),
-                ty2: self.substitute(ty2).into(),
-            }, range.clone())
-        }).collect()
+        self.diagnostics.clone()
     }
 
     fn mismatched(&mut self, ty1: &Typing, ty2: &Typing, range: TextRange) {
-        self.mismatches.push((ty1.clone(), ty2.clone(), range));
+        self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeMismatched {
+            ty1: self.substitute(ty1).into(),
+            ty2: self.substitute(ty2).into(),
+        }, range));
+    }
+
+    fn invalid_operation(&mut self, op: BinaryOp, ty1: &Typing, ty2: &Typing, range: TextRange) {
+        self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidOperation {
+            op,
+            ty1: self.substitute(ty1).into(),
+            ty2: self.substitute(ty2).into(),
+        }, range));
     }
 
     fn substitute(&self, ty: &Typing) -> Typing {
@@ -68,45 +74,53 @@ impl TypeInfer<'_> {
         self.subst.insert(id, ty);
     }
 
-    fn unify(&mut self, ty1: &Typing, ty2: &Typing, range: &TextRange) -> () {
+    fn unify(&mut self, ty1: &Typing, ty2: &Typing, range: TextRange) -> Option<Typing> {
         let ty1 = self.substitute(ty1);
         let ty2 = self.substitute(ty2);
         // eprintln!("{:?} {:?} {:?}", ty1, ty2, range);
         match (&ty1, &ty2) {
-            (&Typing::Unknown, _) | (_, &Typing::Unknown) => {},
+            (_, &Typing::Unknown) => Some(ty1),
+            (&Typing::Unknown, _) => Some(ty2),
             (&Typing::TyVar(id1), &Typing::TyVar(id2)) => {
                 if id1 != id2 {
                     self.add_subst(id1, ty2.clone());
                 }
+                Some(ty2)
             },
             (&Typing::TyVar(id), _) => {
                 self.add_subst(id, ty2.clone());
+                Some(ty2)
             },
             (_, &Typing::TyVar(id)) => {
                 self.add_subst(id, ty1.clone());
+                Some(ty1)
             },
-            (&Typing::Unit, &Typing::Unit) => {},
-            (&Typing::Int, &Typing::Int) => {},
-            (&Typing::Bool, &Typing::Bool) => {},
-            (&Typing::Str, &Typing::Str) => {},
-            (&Typing::Char, &Typing::Char) => {},
+            (&Typing::Unit, &Typing::Unit) => Some(Typing::Unit),
+            (&Typing::Int, &Typing::Int) => Some(Typing::Int),
+            (&Typing::Bool, &Typing::Bool) => Some(Typing::Bool),
+            (&Typing::Str, &Typing::Str) => Some(Typing::Str),
+            (&Typing::Char, &Typing::Char) => Some(Typing::Char),
             (&Typing::Array(ref inner_ty1), &Typing::Array(ref inner_ty2)) => {
-                self.unify(&inner_ty1, &inner_ty2, range);
+                self.unify(&inner_ty1, &inner_ty2, range)?;
+                Some(ty1)
             },
             (&Typing::Tuple(ref inner_ty1), &Typing::Tuple(ref inner_ty2)) => {
                 if inner_ty1.len() != inner_ty2.len() {
                     self.mismatched(&ty1, &ty2, range.clone());
+                    None
+                } else if inner_ty1.iter().zip(inner_ty2.iter()).all(|(ty1, ty2)| self.unify(ty1, ty2, range).is_some()) {
+                    Some(ty1)
                 } else {
-                    for (ty1, ty2) in inner_ty1.iter().zip(inner_ty2.iter()) {
-                        self.unify(ty1, ty2, range);
-                    }
+                    None
                 }
             },
             (&Typing::Option(ref inner_ty1), &Typing::Option(ref inner_ty2)) => {
-                self.unify(&inner_ty1, &inner_ty2, range);
+                self.unify(&inner_ty1, &inner_ty2, range)?;
+                Some(ty1)
             },
             _ => {
                 self.mismatched(&ty1, &ty2, range.clone());
+                None
             }
         }
     }
@@ -116,12 +130,12 @@ impl TypeInfer<'_> {
     }
 
     fn expr_typing(&mut self, idx: ExprIdx) -> Typing {
-        self.expr_tys.get(idx).unwrap().clone()
+        let ty = self.expr_tys.get(idx).unwrap().clone();
+        self.substitute(&ty).into()
     }
 
     pub fn expr_ty(&mut self, idx: ExprIdx) -> Type {
-        let ty = self.expr_typing(idx);
-        self.substitute(&ty).into()
+        self.expr_typing(idx).into()
     }
 
     fn new_ty_var(&mut self) -> Typing {
@@ -130,7 +144,7 @@ impl TypeInfer<'_> {
         Typing::TyVar(id)
     }
 
-    fn define_var(&mut self, var: &VariableInfo, range: &TextRange) -> Typing {
+    fn define_var(&mut self, var: &VariableInfo, range: TextRange) -> Typing {
         let ty_var = self.new_ty_var();
         self.ty_env.insert(var.id, ty_var.clone());
         if let Some(ref ty_hint) = var.ty_hint {
@@ -195,10 +209,10 @@ impl Visitor for TypeInfer<'_> {
             Stmt::LetStmt { var_id, expr, range } => {
                 if let Some(var_id) = var_id {
                     let var = self.db.resolve_ctx.get_var(var_id);
-                    let ty_var = self.define_var(var, &range);
+                    let ty_var = self.define_var(var, range);
                     walk_stmt_idx(self, idx);
                     let expr_ty = self.expr_typing(expr);
-                    self.unify(&ty_var, &expr_ty, &range);
+                    self.unify(&ty_var, &expr_ty, range);
                 } else {
                     walk_stmt_idx(self, idx);
                 }
@@ -212,11 +226,11 @@ impl Visitor for TypeInfer<'_> {
                 if let Some(func_info) = func.fn_info {
                     for &param in &func_info.params {
                         let var = self.db.resolve_ctx.get_var(param);
-                        self.define_var(var, &range);
+                        self.define_var(var, range);
                     }
                     walk_stmt_idx(self, idx);
                     let block_ty = self.expr_typing(func.block);
-                    self.unify(&block_ty, &Typing::from(func_info.return_ty), &range);
+                    self.unify(&block_ty, &Typing::from(func_info.return_ty), range);
                 } else {
                     walk_stmt_idx(self, idx);
                 }
@@ -232,35 +246,36 @@ impl Visitor for TypeInfer<'_> {
             Expr::Binary { op, lhs, rhs, range } => {
                 let lhs_ty = self.expr_typing(lhs);
                 let rhs_ty = self.expr_typing(rhs);
-                self.unify(&lhs_ty, &rhs_ty, &range);
                 match op {
-                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
-                        self.unify(&lhs_ty, &Typing::Int, &range);
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem if lhs_ty == Typing::Int && rhs_ty == Typing::Int => {
+                        Typing::Int
                     },
-                    BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt => {
-                        self.unify(&lhs_ty, &Typing::Int, &range);
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem if lhs_ty == Typing::Str && rhs_ty == Typing::Str => {
+                        Typing::Str
                     },
-                    BinaryOp::And | BinaryOp::Or => {
-                        self.unify(&lhs_ty, &Typing::Bool, &range);
+                    BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt if lhs_ty == Typing::Int && rhs_ty == Typing::Int => {
+                        Typing::Bool
                     },
-                    BinaryOp::Assign => {},
-                };
-                match op {
-                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => Typing::Int,
-                    BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt => Typing::Bool,
-                    BinaryOp::And | BinaryOp::Or => Typing::Bool,
-                    BinaryOp::Assign => rhs_ty,
+                    BinaryOp::And | BinaryOp::Or if lhs_ty == Typing::Bool && rhs_ty == Typing::Bool => {
+                        Typing::Bool
+                    },
+                    BinaryOp::Assign => {
+                        self.unify(&lhs_ty, &rhs_ty, range);
+                        rhs_ty
+                    },
+                    _ => {
+                        self.invalid_operation(op, &lhs_ty, &rhs_ty, range);
+                        Typing::Unknown
+                    },
                 }
             }
             Expr::Unary { op, expr, range } => {
                 let expr_ty = self.expr_typing(expr);
                 match op {
                     UnaryOp::Neg => {
-                        self.unify(&expr_ty, &Typing::Int, &range);
+                        self.unify(&expr_ty, &Typing::Int, range);
+                        Typing::Int
                     },
-                };
-                match op {
-                    UnaryOp::Neg => Typing::Int,
                 }
             },
             Expr::Ref { var_id, range: _ } => {
@@ -277,10 +292,10 @@ impl Visitor for TypeInfer<'_> {
             }
             Expr::If { cond, then_expr, else_expr, range } => {
                 let cond_ty = self.expr_typing(cond);
-                self.unify(&cond_ty, &Typing::Bool, &range);
+                self.unify(&cond_ty, &Typing::Bool, range);
                 let then_ty = self.expr_typing(then_expr);
                 let else_ty = else_expr.map_or(Typing::Unit, |expr| self.expr_typing(expr));
-                self.unify(&then_ty, &else_ty, &range);
+                self.unify(&then_ty, &else_ty, range);
                 then_ty
             }
             Expr::FnCall { fn_id, args, range } => {
@@ -288,7 +303,7 @@ impl Visitor for TypeInfer<'_> {
                     let func = self.db.resolve_ctx.get_fn(fn_id);
                     for (&arg, params_ty) in args.iter().zip(&func.params_ty) {
                         let args_ty = self.expr_typing(arg);
-                        self.unify(&args_ty, &Typing::from(params_ty.clone()), &range);
+                        self.unify(&args_ty, &Typing::from(params_ty.clone()), range);
                     }
                     Typing::from(func.return_ty.clone())
                 } else {
@@ -297,14 +312,13 @@ impl Visitor for TypeInfer<'_> {
             },
             Expr::Index { main_expr, index_expr, range } => {
                 let main_ty = self.expr_typing(main_expr);
-                let main_ty = self.substitute(&main_ty);
                 let index_ty = self.expr_typing(index_expr);
-                self.unify(&index_ty, &Typing::Int, &range);
+                self.unify(&index_ty, &Typing::Int, range);
                 let ret_ty = self.new_ty_var();
                 match main_ty {
-                    Typing::Str => self.unify(&ret_ty, &Typing::Char, &range),
-                    _ => self.unify(&main_ty, &Typing::Array(Box::new(ret_ty.clone())), &range),
-                }
+                    Typing::Str => self.unify(&ret_ty, &Typing::Char, range),
+                    _ => self.unify(&main_ty, &Typing::Array(Box::new(ret_ty.clone())), range),
+                };
                 ret_ty
             },
             Expr::Block { stmts, range: _ } => {
@@ -325,7 +339,7 @@ impl Visitor for TypeInfer<'_> {
                 let mut ty = self.expr_typing(initial);
                 for len_expr in len {
                     let len_ty = self.expr_typing(len_expr);
-                    self.unify(&len_ty, &Typing::Int, &range);
+                    self.unify(&len_ty, &Typing::Int, range);
                     ty = Typing::Array(Box::new(ty))
                 }
                 ty

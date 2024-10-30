@@ -1,5 +1,5 @@
 use rowan::TextRange;
-
+use crate::hir::BinaryOp;
 use crate::r#type::Type;
 use crate::syntax_kind::SyntaxKind;
 
@@ -33,6 +33,11 @@ pub enum DiagnosticKind {
     BreakOutsideLoop,
     ContinueOutsideLoop,
     TypeMismatched {
+        ty1: Type,
+        ty2: Type,
+    },
+    InvalidOperation {
+        op: BinaryOp,
         ty1: Type,
         ty2: Type,
     },
