@@ -112,8 +112,6 @@ pub fn compile(text: &str) {
     for err in &lower_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range));
     }
-    eprintln!("hir: ");
-    eprintln!("{:?}", hir);
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
@@ -132,7 +130,7 @@ pub fn compile(text: &str) {
     println!("compile: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("output.ll")).expect("print_to_file failed");
     optimize(&module);
-    println!("optimized: {} ms", start.elapsed().as_millis());
+    println!("optimize: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("output_optimized.ll")).expect("print_to_file failed");
     generate_submission_file(text, &module);
     run_llvm_ir();
