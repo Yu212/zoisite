@@ -32,31 +32,15 @@ impl LanguageServer for Backend {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
-                semantic_tokens_provider: Some(
-                    SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
-                        SemanticTokensRegistrationOptions {
-                            text_document_registration_options: {
-                                TextDocumentRegistrationOptions {
-                                    document_selector: Some(vec![DocumentFilter {
-                                        language: Some("zoisite".to_string()),
-                                        scheme: Some("file".to_string()),
-                                        pattern: None,
-                                    }]),
-                                }
-                            },
-                            semantic_tokens_options: SemanticTokensOptions {
-                                work_done_progress_options: WorkDoneProgressOptions::default(),
-                                legend: SemanticTokensLegend {
-                                    token_types: LEGEND_TYPE.into(),
-                                    token_modifiers: vec![],
-                                },
-                                range: None,
-                                full: Some(SemanticTokensFullOptions::Bool(true)),
-                            },
-                            static_registration_options: StaticRegistrationOptions::default(),
-                        },
-                    ),
-                ),
+                semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(SemanticTokensOptions {
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                    legend: SemanticTokensLegend {
+                        token_types: LEGEND_TYPE.into(),
+                        token_modifiers: vec![],
+                    },
+                    range: None,
+                    full: Some(SemanticTokensFullOptions::Bool(true)),
+                })),
                 ..Default::default()
             },
             ..Default::default()
@@ -69,6 +53,16 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
+    }
+
+    async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        self.client.log_message(MessageType::INFO, "did_open").await;
+        self.on_change(params.text_document.uri, &params.text_document.text).await;
+    }
+
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        self.client.log_message(MessageType::INFO, format!("did_change {}", params.content_changes.len())).await;
+        self.on_change(params.text_document.uri, &params.content_changes[0].text).await;
     }
 
     async fn hover(&self, _: HoverParams) -> Result<Option<Hover>> {
@@ -84,16 +78,6 @@ impl LanguageServer for Backend {
             result_id: None,
             data: semantic_tokens,
         })))
-    }
-
-    async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        self.client.log_message(MessageType::INFO, "did_open").await;
-        self.on_change(params.text_document.uri, &params.text_document.text).await;
-    }
-
-    async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        self.client.log_message(MessageType::INFO, format!("did_change {}", params.content_changes.len())).await;
-        self.on_change(params.text_document.uri, &params.content_changes[0].text).await;
     }
 }
 

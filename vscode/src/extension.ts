@@ -19,7 +19,10 @@ export function activate(context: ExtensionContext) {
         debug: run,
     };
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: "file", language: "zoisite" }],
+        documentSelector: [
+            { scheme: "file", language: "zoisite" },
+            { scheme: "untitled", language: "zoisite" },
+        ],
         synchronize: {
             fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
         },
