@@ -1,7 +1,7 @@
-use rowan::TextRange;
 use crate::hir::BinaryOp;
 use crate::r#type::Type;
 use crate::syntax_kind::SyntaxKind;
+use rowan::TextRange;
 
 #[derive(Debug, Clone)]
 pub struct Diagnostic {

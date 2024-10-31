@@ -21,7 +21,7 @@ impl Type {
             Type::Unit => Some(ctx.i8_type().into()),
             Type::Int => Some(ctx.i64_type().into()),
             Type::Bool => Some(ctx.bool_type().into()),
-            Type::Str => Some(ctx.i8_type().ptr_type(AddressSpace::default()).into()),
+            Type::Str => Some(ctx.struct_type(&[ctx.i64_type().into(), ctx.i8_type().ptr_type(AddressSpace::default()).into()], false).into()),
             Type::Char => Some(ctx.i8_type().into()),
             Type::Array(inner_ty) => Some(inner_ty.llvm_ty(ctx)?.ptr_type(AddressSpace::default()).into()),
             Type::Tuple(inner_ty) => {
