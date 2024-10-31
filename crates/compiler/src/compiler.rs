@@ -272,31 +272,44 @@ impl<'ctx> Compiler<'ctx> {
         match expr {
             Expr::Missing => None,
             Expr::Binary { op, lhs, rhs, range: _ } => {
-                if let BinaryOp::Assign = op {
-                    let ptr = self.compile_lvalue(self.db.exprs[lhs].clone())?;
-                    let rhs_value = self.compile_expr_idx(rhs)?;
-                    self.builder.build_store(ptr, rhs_value).ok()?;
-                    return Some(rhs_value);
+                let lhs_ty = &self.type_infer.expr_ty(lhs);
+                let rhs_ty = &self.type_infer.expr_ty(rhs);
+                match (&op, lhs_ty, rhs_ty) {
+                    (BinaryOp::Assign, _, _) => {
+                        let ptr = self.compile_lvalue(self.db.exprs[lhs].clone())?;
+                        let rhs_value = self.compile_expr_idx(rhs)?;
+                        self.builder.build_store(ptr, rhs_value).ok()?;
+                        Some(rhs_value)
+                    },
+                    (BinaryOp::Add, Type::Str, Type::Str) => {
+                        let lhs_value = self.compile_expr_idx(lhs)?.into_struct_value();
+                        let rhs_value = self.compile_expr_idx(rhs)?.into_struct_value();
+                        let result = self.build_str_concat(lhs_value, rhs_value).ok()?;
+                        Some(result.into())
+                    },
+                    (_, Type::Int, Type::Int) => {
+                        let lhs_value = self.compile_expr_idx(lhs)?.into_int_value();
+                        let rhs_value = self.compile_expr_idx(rhs)?.into_int_value();
+                        let int_ret = match op {
+                            BinaryOp::Add => self.builder.build_int_add(lhs_value, rhs_value, "add").ok(),
+                            BinaryOp::Sub => self.builder.build_int_sub(lhs_value, rhs_value, "sub").ok(),
+                            BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "mul").ok(),
+                            BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
+                            BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
+                            BinaryOp::EqEq => self.builder.build_int_compare(IntPredicate::EQ, lhs_value, rhs_value, "eq").ok(),
+                            BinaryOp::Neq => self.builder.build_int_compare(IntPredicate::NE, lhs_value, rhs_value, "ne").ok(),
+                            BinaryOp::Ge => self.builder.build_int_compare(IntPredicate::SGE, lhs_value, rhs_value, "ge").ok(),
+                            BinaryOp::Le => self.builder.build_int_compare(IntPredicate::SLE, lhs_value, rhs_value, "le").ok(),
+                            BinaryOp::Gt => self.builder.build_int_compare(IntPredicate::SGT, lhs_value, rhs_value, "gt").ok(),
+                            BinaryOp::Lt => self.builder.build_int_compare(IntPredicate::SLT, lhs_value, rhs_value, "lt").ok(),
+                            BinaryOp::And => self.builder.build_and(lhs_value, rhs_value, "and").ok(),
+                            BinaryOp::Or => self.builder.build_or(lhs_value, rhs_value, "or").ok(),
+                            BinaryOp::Assign => unreachable!(),
+                        };
+                        Some(int_ret?.into())
+                    },
+                    _ => unreachable!(),
                 }
-                let lhs_value = self.compile_expr_idx(lhs)?.into_int_value();
-                let rhs_value = self.compile_expr_idx(rhs)?.into_int_value();
-                let int_ret = match op {
-                    BinaryOp::Add => self.builder.build_int_add(lhs_value, rhs_value, "add").ok(),
-                    BinaryOp::Sub => self.builder.build_int_sub(lhs_value, rhs_value, "sub").ok(),
-                    BinaryOp::Mul => self.builder.build_int_mul(lhs_value, rhs_value, "mul").ok(),
-                    BinaryOp::Div => self.builder.build_int_signed_div(lhs_value, rhs_value, "div").ok(),
-                    BinaryOp::Rem => self.builder.build_int_signed_rem(lhs_value, rhs_value, "rem").ok(),
-                    BinaryOp::EqEq => self.builder.build_int_compare(IntPredicate::EQ, lhs_value, rhs_value, "eq").ok(),
-                    BinaryOp::Neq => self.builder.build_int_compare(IntPredicate::NE, lhs_value, rhs_value, "ne").ok(),
-                    BinaryOp::Ge => self.builder.build_int_compare(IntPredicate::SGE, lhs_value, rhs_value, "ge").ok(),
-                    BinaryOp::Le => self.builder.build_int_compare(IntPredicate::SLE, lhs_value, rhs_value, "le").ok(),
-                    BinaryOp::Gt => self.builder.build_int_compare(IntPredicate::SGT, lhs_value, rhs_value, "gt").ok(),
-                    BinaryOp::Lt => self.builder.build_int_compare(IntPredicate::SLT, lhs_value, rhs_value, "lt").ok(),
-                    BinaryOp::And => self.builder.build_and(lhs_value, rhs_value, "and").ok(),
-                    BinaryOp::Or => self.builder.build_or(lhs_value, rhs_value, "or").ok(),
-                    BinaryOp::Assign => unreachable!(),
-                };
-                Some(int_ret?.into())
             },
             Expr::Unary { op, expr, range: _ } => {
                 let expr_value = self.compile_expr_idx(expr)?.into_int_value();
@@ -502,5 +515,37 @@ impl<'ctx> Compiler<'ctx> {
         let result = str_type.get_undef();
         let result = self.builder.build_insert_value(result, len, 0, "res")?;
         Ok(self.builder.build_insert_value(result, ptr, 1, "res")?.into_struct_value())
+    }
+
+    fn build_str_concat(&mut self, lhs: StructValue<'ctx>, rhs: StructValue<'ctx>) -> Result<StructValue<'ctx>, BuilderError> {
+        let i64_type = self.context.i64_type();
+        let i8_type = self.context.i8_type();
+        let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
+        let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
+        let lhs_str_ptr = self.builder.build_alloca(str_type, "str")?;
+        let rhs_str_ptr = self.builder.build_alloca(str_type, "str")?;
+        self.builder.build_store(lhs_str_ptr, lhs)?;
+        self.builder.build_store(rhs_str_ptr, rhs)?;
+
+        let lhs_len_ptr = self.builder.build_struct_gep(str_type, lhs_str_ptr, 0, "len")?;
+        let lhs_ptr_ptr = self.builder.build_struct_gep(str_type, lhs_str_ptr, 1, "ptr")?;
+        let lhs_len = self.builder.build_load(i64_type, lhs_len_ptr, "str")?.into_int_value();
+        let lhs_ptr = self.builder.build_load(i8_ptr_type, lhs_ptr_ptr, "str")?;
+
+        let rhs_len_ptr = self.builder.build_struct_gep(str_type, rhs_str_ptr, 0, "len")?;
+        let rhs_ptr_ptr = self.builder.build_struct_gep(str_type, rhs_str_ptr, 1, "ptr")?;
+        let rhs_len = self.builder.build_load(i64_type, rhs_len_ptr, "str")?.into_int_value();
+        let rhs_ptr = self.builder.build_load(i8_ptr_type, rhs_ptr_ptr, "str")?;
+
+        let new_len = self.builder.build_int_add(lhs_len, rhs_len, "add")?;
+        let malloc_size = self.builder.build_int_add(new_len, i64_type.const_int(1, false), "size")?;
+        let rhs_cpy_size = self.builder.build_int_add(rhs_len, i64_type.const_int(1, false), "tmp")?;
+        let new_str_ptr = self.builder.build_array_malloc(i8_type, malloc_size, "str")?;
+
+        self.builder.build_memcpy(new_str_ptr, 8, lhs_ptr.into_pointer_value(), 8, lhs_len)?;
+        let rhs_dest = unsafe { self.builder.build_gep(i8_type, new_str_ptr, &[lhs_len], "tmp")? };
+        self.builder.build_memcpy(rhs_dest, 1, rhs_ptr.into_pointer_value(), 8, rhs_cpy_size)?;
+
+        self.build_str_struct(new_len, new_str_ptr)
     }
 }
