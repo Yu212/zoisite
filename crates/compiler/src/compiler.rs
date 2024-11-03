@@ -320,8 +320,6 @@ impl<'ctx> Compiler<'ctx> {
                             BinaryOp::Le => self.builder.build_int_compare(IntPredicate::SLE, lhs_value, rhs_value, "le").ok(),
                             BinaryOp::Gt => self.builder.build_int_compare(IntPredicate::SGT, lhs_value, rhs_value, "gt").ok(),
                             BinaryOp::Lt => self.builder.build_int_compare(IntPredicate::SLT, lhs_value, rhs_value, "lt").ok(),
-                            BinaryOp::And => self.builder.build_and(lhs_value, rhs_value, "and").ok(),
-                            BinaryOp::Or => self.builder.build_or(lhs_value, rhs_value, "or").ok(),
                             _ => unreachable!(),
                         };
                         Some(int_ret?.into())
