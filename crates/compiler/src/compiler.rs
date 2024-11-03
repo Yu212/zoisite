@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::{Builder, BuilderError};
 use inkwell::context::Context;
@@ -304,11 +303,21 @@ impl<'ctx> Compiler<'ctx> {
                             BinaryOp::Lt => self.builder.build_int_compare(IntPredicate::SLT, lhs_value, rhs_value, "lt").ok(),
                             BinaryOp::And => self.builder.build_and(lhs_value, rhs_value, "and").ok(),
                             BinaryOp::Or => self.builder.build_or(lhs_value, rhs_value, "or").ok(),
-                            BinaryOp::Assign => unreachable!(),
+                            _ => unreachable!(),
                         };
                         Some(int_ret?.into())
                     },
-                    _ => unreachable!(),
+                    (_, Type::Bool, Type::Bool) => {
+                        let lhs_value = self.compile_expr_idx(lhs)?.into_int_value();
+                        let rhs_value = self.compile_expr_idx(rhs)?.into_int_value();
+                        let int_ret = match op {
+                            BinaryOp::And => self.builder.build_and(lhs_value, rhs_value, "and").ok(),
+                            BinaryOp::Or => self.builder.build_or(lhs_value, rhs_value, "or").ok(),
+                            _ => unreachable!(),
+                        };
+                        Some(int_ret?.into())
+                    },
+                    _ => unreachable!("{:?}, {:?}, {:?}", op, lhs_ty, rhs_ty),
                 }
             },
             Expr::Unary { op, expr, range: _ } => {
@@ -472,12 +481,12 @@ impl<'ctx> Compiler<'ctx> {
     fn array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> Option<PointerValue<'ctx>> {
         if i + 1 == len_vals.len() {
             unsafe {
-                let ptr = self.builder.build_in_bounds_gep(arr_types[0], all_array, &[all_idx_val], "tmp").ok()?;
+                let ptr = self.builder.build_in_bounds_gep(arr_types[i + 1], all_array, &[all_idx_val], "tmp").ok()?;
                 return Some(ptr);
             }
         }
         let i64_type = self.context.i64_type();
-        let array = self.builder.build_array_malloc(arr_types[i], len_vals[i], "array").ok()?;
+        let array = self.builder.build_array_malloc(arr_types[i + 1], len_vals[i], "array").ok()?;
 
         let cur_func = self.cur_function.unwrap();
         let cond_block = self.context.append_basic_block(cur_func, "loopcond");
