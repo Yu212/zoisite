@@ -33,6 +33,7 @@ impl ResolveContext {
         self.define_global_fn(EcoString::from("inputStr"), vec![EcoString::from("len")], vec![Type::Int], Type::Str);
         self.define_global_fn(EcoString::from("chr"), vec![EcoString::from("n")], vec![Type::Int], Type::Char);
         self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
+        self.define_global_fn(EcoString::from("str"), vec![EcoString::from("n")], vec![Type::Int], Type::Str);
     }
     pub fn define_var(&mut self, name: EcoString, ty_hint: Option<Type>) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();

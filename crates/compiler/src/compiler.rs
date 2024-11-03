@@ -75,6 +75,8 @@ impl<'ctx> Compiler<'ctx> {
         let printf_function = self.module.add_function("printf", printf_type, None);
         let scanf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
         let scanf_function = self.module.add_function("scanf", scanf_type, None);
+        let sprintf_type = void_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], true);
+        let sprintf_function = self.module.add_function("sprintf", sprintf_type, None);
         let strlen_type = i64_type.fn_type(&[i8_ptr_type.into()], true);
         let strlen_function = self.module.add_function("strlen", strlen_type, None);
         {
@@ -153,6 +155,23 @@ impl<'ctx> Compiler<'ctx> {
             let ret_val = self.builder.build_int_z_extend(param, i64_type, "tmp").unwrap();
             self.builder.build_return(Some(&ret_val)).unwrap();
             self.functions.insert(FnId(5), ord_fn);
+        }
+        {
+            let str_type = str_type.fn_type(&[i64_type.into()], false);
+            let str_fn = self.module.add_function("str", str_type, None);
+            let basic_block = self.context.append_basic_block(str_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let format_str = self.builder.build_global_string_ptr("%d", "sprintf_str_format").unwrap();
+            let param = str_fn.get_first_param().unwrap();
+            let sprintf_ptr = self.builder.build_array_malloc(i8_type, i64_type.const_int(20, false), "str").unwrap();
+            self.builder.build_call(sprintf_function, &[sprintf_ptr.into(), format_str.as_pointer_value().into(), param.into()], "").unwrap();
+
+            let call_site = self.builder.build_call(strlen_function, &[sprintf_ptr.into()], "").unwrap();
+            let len = call_site.try_as_basic_value().unwrap_left();
+            let result = self.build_str_struct(len.into_int_value(), sprintf_ptr).unwrap();
+
+            self.builder.build_return(Some(&result)).unwrap();
+            self.functions.insert(FnId(6), str_fn);
         }
     }
 
