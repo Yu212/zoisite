@@ -12,7 +12,7 @@ use crate::scope::VarId;
 use crate::visitor::{walk_expr_idx, walk_stmt_idx, Visitor};
 
 pub struct TypeInfer<'db> {
-    pub db: &'db Database,
+    db: &'db Database,
     diagnostics: Vec<Diagnostic>,
     expr_tys: ArenaMap<ExprIdx, Typing>,
     subst: HashMap<usize, Typing>,
