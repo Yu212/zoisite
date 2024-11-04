@@ -121,6 +121,7 @@ impl<'a> Lexer<'a> {
             "break" => SyntaxKind::BreakKw,
             "continue" => SyntaxKind::ContinueKw,
             "fun" => SyntaxKind::FunKw,
+            "none" => SyntaxKind::NoneKw,
             "true" => SyntaxKind::TrueKw,
             "false" => SyntaxKind::FalseKw,
             _ => SyntaxKind::Ident,

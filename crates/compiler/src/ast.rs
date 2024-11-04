@@ -100,6 +100,7 @@ asts! {
         FnCallExpr,
         IndexExpr,
         BlockExpr,
+        NoneLiteral,
         NumberLiteral,
         BoolLiteral,
         StringLiteral,
@@ -282,6 +283,9 @@ impl BlockExpr {
     pub fn stmts(&self) -> impl Iterator<Item = Stmt> {
         self.0.children().filter_map(Stmt::cast)
     }
+}
+
+impl NoneLiteral {
 }
 
 impl NumberLiteral {

@@ -430,6 +430,9 @@ impl<'ctx> Compiler<'ctx> {
                 let i8_type = self.context.i8_type();
                 stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().unwrap_or(Some(i8_type.const_int(0, false).into()))
             },
+            Expr::NoneLiteral { range: _ } => {
+                todo!()
+            },
             Expr::NumberLiteral { n, range: _ } => {
                 let i64_type = self.context.i64_type();
                 Some(i64_type.const_int(n?, false).into())

@@ -91,6 +91,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, node: Expr) {
                 visitor.visit_stmt_idx(stmt);
             }
         }
+        Expr::NoneLiteral { range: _ } => {}
         Expr::NumberLiteral { n: _, range: _ } => {}
         Expr::BoolLiteral { val: _, range: _ } => {}
         Expr::StringLiteral { val: _, range: _ } => {}

@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::iter;
 
 use ecow::EcoString;
-
+use crate::hir::Identifier;
 use crate::r#type::Type;
 use crate::scope::{FnId, Scope, VarId};
 
@@ -35,11 +35,12 @@ impl ResolveContext {
         self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
         self.define_global_fn(EcoString::from("str"), vec![EcoString::from("n")], vec![Type::Int], Type::Str);
     }
-    pub fn define_var(&mut self, name: EcoString, ty_hint: Option<Type>) -> VarId {
+    pub fn define_var(&mut self, name: EcoString, ident: Option<Identifier>, ty_hint: Option<Type>) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
         let id = VarId(self.variables.len());
         self.variables.push(VariableInfo {
             name: name.clone(),
+            ident,
             id,
             place: scope.place,
             ty: RefCell::new(Type::Invalid),
@@ -69,7 +70,7 @@ impl ResolveContext {
     pub fn define_global_fn(&mut self, name: EcoString, params: Vec<EcoString>, params_ty: Vec<Type>, return_ty: Type) -> FuncInfo {
         self.push_scope(true);
         let params: Vec<_> = params.iter().zip(params_ty.clone())
-            .map(|(name, ty)| self.define_var(name.clone(), Some(ty)))
+            .map(|(name, ty)| self.define_var(name.clone(), None, Some(ty)))
             .collect();
         self.pop_scope();
         let place = self.global_scope.place;
@@ -129,6 +130,7 @@ impl ResolveContext {
 }
 
 pub struct VariableInfo {
+    pub ident: Option<Identifier>,
     pub name: EcoString,
     pub id: VarId,
     pub place: Place,

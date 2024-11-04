@@ -95,6 +95,9 @@ pub enum Expr {
         stmts: Vec<StmtIdx>,
         range: TextRange,
     },
+    NoneLiteral {
+        range: TextRange,
+    },
     NumberLiteral {
         n: Option<u64>,
         range: TextRange,
@@ -114,7 +117,7 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     pub name: EcoString,
     pub range: TextRange,

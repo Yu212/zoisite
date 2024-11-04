@@ -54,7 +54,7 @@ impl Database {
             .collect();
         let return_ty = self.lower_type(ast.return_ty());
         let params: Vec<_> = params.iter().zip(params_ty)
-            .map(|(ident, ty)| self.resolve_ctx.define_var(ident.name.clone(), Some(ty)))
+            .map(|(ident, ty)| self.resolve_ctx.define_var(ident.name.clone(), Some(ident.clone()), Some(ty)))
             .collect();
         let name = self.lower_ident(ast.name()).map(|ident| ident.name);
         let fn_info = name.map(|name| self.resolve_ctx.define_fn(name.clone(), params, return_ty));
@@ -91,7 +91,7 @@ impl Database {
         let name = self.lower_ident(ast.name());
         let ty = ast.type_spec().map(|type_spec| self.lower_type(Some(type_spec)));
         let var_id = if let Some(name) = name {
-            Some(self.resolve_ctx.define_var(name.name.clone(), ty))
+            Some(self.resolve_ctx.define_var(name.clone().name, Some(name), ty))
         } else {
             None
         };
@@ -139,10 +139,10 @@ impl Database {
     }
     pub fn lower_type(&mut self, ast: Option<TypeSpec>) -> Type {
         match ast {
-            Some(ast::TypeSpec::IdentTypeSpec(ast)) => self.lower_ident_type(ast),
-            Some(ast::TypeSpec::ArrayTypeSpec(ast)) => self.lower_array_type(ast),
-            Some(ast::TypeSpec::OptionTypeSpec(ast)) => self.lower_option_type(ast),
-            Some(ast::TypeSpec::TupleTypeSpec(ast)) => self.lower_tuple_type(ast),
+            Some(TypeSpec::IdentTypeSpec(ast)) => self.lower_ident_type(ast),
+            Some(TypeSpec::ArrayTypeSpec(ast)) => self.lower_array_type(ast),
+            Some(TypeSpec::OptionTypeSpec(ast)) => self.lower_option_type(ast),
+            Some(TypeSpec::TupleTypeSpec(ast)) => self.lower_tuple_type(ast),
             None => Type::Invalid,
         }
     }
@@ -178,6 +178,7 @@ impl Database {
             Some(ast::Expr::FnCallExpr(ast)) => self.lower_fn_call_expr(ast),
             Some(ast::Expr::IndexExpr(ast)) => self.lower_index_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
+            Some(ast::Expr::NoneLiteral(ast)) => self.lower_none_literal(ast),
             Some(ast::Expr::NumberLiteral(ast)) => self.lower_number_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             Some(ast::Expr::StringLiteral(ast)) => self.lower_string_literal(ast),
@@ -297,6 +298,11 @@ impl Database {
         self.resolve_ctx.pop_scope();
         Expr::Block {
             stmts,
+            range: ast.syntax().text_range(),
+        }
+    }
+    pub fn lower_none_literal(&mut self, ast: ast::NoneLiteral) -> Expr {
+        Expr::NoneLiteral {
             range: ast.syntax().text_range(),
         }
     }

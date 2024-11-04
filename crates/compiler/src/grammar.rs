@@ -204,6 +204,7 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<(CompletedMarke
 
 pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
     match p.current() {
+        SyntaxKind::NoneKw => Some((none_literal(p), false)),
         SyntaxKind::Number => Some((number_literal(p), false)),
         SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some((bool_literal(p), false)),
         SyntaxKind::String => Some((string_literal(p), false)),
@@ -305,6 +306,13 @@ pub fn block_expr(p: &mut Parser<'_>) -> CompletedMarker {
     }
     p.expect(SyntaxKind::CloseBrace);
     m.complete(p, SyntaxKind::BlockExpr)
+}
+
+pub fn none_literal(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::NoneKw));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::NoneLiteral)
 }
 
 pub fn number_literal(p: &mut Parser<'_>) -> CompletedMarker {

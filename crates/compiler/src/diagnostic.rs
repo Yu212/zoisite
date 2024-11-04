@@ -41,4 +41,5 @@ pub enum DiagnosticKind {
         ty1: Type,
         ty2: Type,
     },
+    TypeInferenceFailure,
 }

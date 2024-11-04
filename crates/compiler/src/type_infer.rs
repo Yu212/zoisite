@@ -40,7 +40,12 @@ impl TypeInfer<'_> {
             if var_info.ty_hint.is_none() {
                 // eprintln!("{:?} {:?}", var_info.name, inferred);
             }
-            var_info.ty.replace(inferred.into());
+            if inferred.contains_ty_var() {
+                let range = var_info.ident.clone().unwrap().range;
+                self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeInferenceFailure, range));
+            } else {
+                var_info.ty.replace(inferred.into());
+            }
         }
         self.diagnostics.clone()
     }
@@ -166,6 +171,23 @@ enum Typing {
     Tuple(Vec<Typing>),
     Option(Box<Typing>),
     Unknown,
+}
+
+impl Typing {
+    pub fn contains_ty_var(&self) -> bool {
+        match self {
+            Typing::TyVar(_) => true,
+            Typing::Unit => false,
+            Typing::Int => false,
+            Typing::Bool => false,
+            Typing::Str => false,
+            Typing::Char => false,
+            Typing::Array(inner_ty) => inner_ty.contains_ty_var(),
+            Typing::Tuple(inner_tys) => inner_tys.into_iter().any(Self::contains_ty_var),
+            Typing::Option(inner_ty) => inner_ty.contains_ty_var(),
+            Typing::Unknown => false,
+        }
+    }
 }
 
 impl From<Type> for Typing {
@@ -332,6 +354,7 @@ impl Visitor for TypeInfer<'_> {
                     unreachable!()
                 }
             },
+            Expr::NoneLiteral { range: _ } => Typing::Option(Box::new(self.new_ty_var())),
             Expr::NumberLiteral { n: _, range: _ } => Typing::Int,
             Expr::BoolLiteral { val: _, range: _ } => Typing::Bool,
             Expr::StringLiteral { val: _, range: _ } => Typing::Str,
