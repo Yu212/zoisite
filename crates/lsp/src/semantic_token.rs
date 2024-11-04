@@ -2,6 +2,7 @@ use ropey::Rope;
 use tower_lsp::lsp_types::{SemanticToken, SemanticTokenType};
 use zoisite::language::SyntaxToken;
 use zoisite::syntax_kind::SyntaxKind;
+use crate::backend::text_range_to_range;
 
 pub const LEGEND_TYPE: &[SemanticTokenType] = &[
     SemanticTokenType::STRING,
@@ -29,7 +30,7 @@ pub fn get_semantic_tokens(tokens: Vec<SyntaxToken>, rope: &Rope) -> Vec<Semanti
             SyntaxKind::Number => SemanticTokenType::NUMBER,
             _ => return None,
         };
-        let range = crate::backend::text_range_to_range(token.text_range(), rope);
+        let range = text_range_to_range(token.text_range(), rope);
         let delta_line = range.start.line - prev_line;
         let delta_start = if delta_line == 0 { range.start.character - prev_start } else { range.start.character };
         prev_line = range.start.line;

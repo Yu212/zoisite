@@ -22,11 +22,11 @@ pub fn stmt(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
     match p.current() {
         SyntaxKind::Semicolon => (empty_stmt(p), true),
         SyntaxKind::LetKw => (let_stmt(p), true),
-        SyntaxKind::WhileKw => (while_stmt(p), true),
+        SyntaxKind::WhileKw => (while_stmt(p), false),
         SyntaxKind::BreakKw => (break_stmt(p), true),
         SyntaxKind::ContinueKw => (continue_stmt(p), true),
         SyntaxKind::FunKw => (func_stmt(p), false),
-        _ => (expr_stmt(p), true),
+        _ => expr_stmt(p),
     }
 }
 
@@ -72,10 +72,11 @@ pub fn continue_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::ContinueStmt)
 }
 
-pub fn expr_stmt(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn expr_stmt(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
     let m = p.start();
-    expr(p, 0);
-    m.complete(p, SyntaxKind::ExprStmt)
+    let res = expr(p, 0);
+    let ends_with_block = res.map_or(false, |r| r.1);
+    (m.complete(p, SyntaxKind::ExprStmt), !ends_with_block)
 }
 
 pub fn typed_ident(p: &mut Parser<'_>, optional: bool) -> CompletedMarker {
@@ -158,8 +159,8 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::LetStmt)
 }
 
-pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<CompletedMarker> {
-    let mut lhs = lhs(p)?;
+pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<(CompletedMarker, bool)> {
+    let (mut lhs, mut ends_with_block) = lhs(p)?;
     loop {
         let op: OpKind = match p.current() {
             SyntaxKind::Plus => OpKind::BinaryOp(BinaryOp::Add),
@@ -184,6 +185,7 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<CompletedMarker
             break;
         }
         p.bump();
+        ends_with_block = false;
         let m = lhs.precede(p);
         if matches!(op, OpKind::PostfixOp(PostfixOp::Index)) {
             expr(p, 0);
@@ -197,20 +199,20 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<CompletedMarker
             }
         }
     }
-    Some(lhs)
+    Some((lhs, ends_with_block))
 }
 
-pub fn lhs(p: &mut Parser<'_>) -> Option<CompletedMarker> {
+pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
     match p.current() {
-        SyntaxKind::Number => Some(number_literal(p)),
-        SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some(bool_literal(p)),
-        SyntaxKind::String => Some(string_literal(p)),
-        SyntaxKind::OpenBracket => Some(array_literal(p)),
-        SyntaxKind::Minus => Some(prefix_expr(p)),
-        SyntaxKind::OpenParen => Some(paren_expr(p)),
-        SyntaxKind::OpenBrace => Some(block_expr(p)),
-        SyntaxKind::Ident if p.nth_at(1, SyntaxKind::OpenParen) => Some(fn_call_expr(p)),
-        SyntaxKind::Ident => Some(ref_expr(p)),
+        SyntaxKind::Number => Some((number_literal(p), false)),
+        SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some((bool_literal(p), false)),
+        SyntaxKind::String => Some((string_literal(p), false)),
+        SyntaxKind::OpenBracket => Some((array_literal(p), false)),
+        SyntaxKind::Minus => Some((prefix_expr(p), false)),
+        SyntaxKind::OpenParen => Some((paren_expr(p), false)),
+        SyntaxKind::OpenBrace => Some((block_expr(p), true)),
+        SyntaxKind::Ident if p.nth_at(1, SyntaxKind::OpenParen) => Some((fn_call_expr(p), false)),
+        SyntaxKind::Ident => Some((ref_expr(p), false)),
         SyntaxKind::IfKw => Some(if_expr(p)),
         _ => {
             p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::String, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
@@ -254,18 +256,20 @@ pub fn ref_expr(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::RefExpr)
 }
 
-pub fn if_expr(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn if_expr(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
     assert!(p.at(SyntaxKind::IfKw));
     let m = p.start();
     p.bump();
     p.expect(SyntaxKind::OpenParen);
     expr(p, 0);
     p.expect(SyntaxKind::CloseParen);
-    expr(p, 0);
+    let res = expr(p, 0);
+    let mut ends_with_block = res.map_or(false, |r| r.1);
     if p.eat(SyntaxKind::ElseKw) {
-        expr(p, 0);
+        let res = expr(p, 0);
+        ends_with_block = res.map_or(false, |r| r.1);
     }
-    m.complete(p, SyntaxKind::IfExpr)
+    (m.complete(p, SyntaxKind::IfExpr), ends_with_block)
 }
 
 pub fn fn_call_expr(p: &mut Parser<'_>) -> CompletedMarker {
