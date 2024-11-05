@@ -56,8 +56,8 @@ pub fn parse(text: &str) -> (Vec<SyntaxToken>, hir::Root, Vec<Diagnostic>) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return (tokens, hir, [lexer_errors, parser_errors, lower_errors].concat());
     }
-    let mut type_infer = TypeInfer::new(&db);
-    let type_check_errors = type_infer.check(hir.clone());
+    let type_infer = TypeInfer::new(&mut db);
+    let (_, type_check_errors) = type_infer.check(hir.clone());
     if !type_check_errors.is_empty() {
         return (tokens, hir, type_check_errors);
     }
@@ -75,13 +75,13 @@ pub fn compile_no_output(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
-    let mut type_infer = TypeInfer::new(&db);
-    let type_check_errors = type_infer.check(hir.clone());
+    let type_infer = TypeInfer::new(&mut db);
+    let (type_inferred, type_check_errors) = type_infer.check(hir.clone());
     if !type_check_errors.is_empty() {
         return;
     }
     let context = Context::create();
-    let compiler = Compiler::new(&context, &db, type_infer, "main");
+    let compiler = Compiler::new(&context, &db, type_inferred, "main");
     let module = compiler.compile(&hir);
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
     unsafe {
@@ -115,8 +115,8 @@ pub fn compile(text: &str) {
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return;
     }
-    let mut type_infer = TypeInfer::new(&db);
-    let type_check_errors = type_infer.check(hir.clone());
+    let type_infer = TypeInfer::new(&mut db);
+    let (type_inferred, type_check_errors) = type_infer.check(hir.clone());
     eprintln!("type check errors: ");
     for err in &type_check_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range));
@@ -125,7 +125,7 @@ pub fn compile(text: &str) {
         return;
     }
     let context = Context::create();
-    let compiler = Compiler::new(&context, &db, type_infer, "main");
+    let compiler = Compiler::new(&context, &db, type_inferred, "main");
     let module = compiler.compile(&hir);
     println!("compile: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("output.ll")).expect("print_to_file failed");

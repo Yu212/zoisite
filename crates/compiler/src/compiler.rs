@@ -11,7 +11,7 @@ use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
 use crate::r#type::Type;
 use crate::scope::{FnId, VarId};
-use crate::type_infer::TypeInfer;
+use crate::type_infer::TypeInferResult;
 
 pub struct Compiler<'ctx> {
     pub db: &'ctx Database,
@@ -22,11 +22,11 @@ pub struct Compiler<'ctx> {
     pub functions: HashMap<FnId, FunctionValue<'ctx>>,
     pub cur_function: Option<FunctionValue<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>,
-    pub type_infer: TypeInfer<'ctx>,
+    pub type_inferred: TypeInferResult,
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn new(context: &'ctx Context, db: &'ctx Database, type_infer: TypeInfer<'ctx>, module_name: &str) -> Self {
+    pub fn new(context: &'ctx Context, db: &'ctx Database, type_inferred: TypeInferResult, module_name: &str) -> Self {
         let module = context.create_module(module_name);
         let builder = context.create_builder();
         Self {
@@ -38,7 +38,7 @@ impl<'ctx> Compiler<'ctx> {
             functions: HashMap::new(),
             cur_function: None,
             loop_stack: Vec::new(),
-            type_infer,
+            type_inferred,
         }
     }
 
@@ -269,7 +269,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(self.addresses[&var_id?])
             },
             Expr::Index { main_expr, index_expr, range: _ } => {
-                let main_ty = &self.type_infer.expr_ty(main_expr);
+                let main_ty = &self.type_inferred.expr_ty(main_expr);
                 let inner_ty = main_ty.inner_ty().unwrap().llvm_ty(self.context).unwrap();
                 let main_ty = main_ty.llvm_ty(self.context).unwrap();
                 let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
@@ -290,8 +290,8 @@ impl<'ctx> Compiler<'ctx> {
         match expr {
             Expr::Missing => None,
             Expr::Binary { op, lhs, rhs, range: _ } => {
-                let lhs_ty = &self.type_infer.expr_ty(lhs);
-                let rhs_ty = &self.type_infer.expr_ty(rhs);
+                let lhs_ty = &self.type_inferred.expr_ty(lhs);
+                let rhs_ty = &self.type_inferred.expr_ty(rhs);
                 match (&op, lhs_ty, rhs_ty) {
                     (BinaryOp::Assign, _, _) => {
                         let ptr = self.compile_lvalue(self.db.exprs[lhs].clone())?;
@@ -352,7 +352,7 @@ impl<'ctx> Compiler<'ctx> {
                 self.builder.build_load(ty, ptr, "tmp").ok()
             },
             Expr::Tuple { elements, range: _ } => {
-                let struct_ty = self.type_infer.expr_ty(idx).llvm_ty(self.context)?;
+                let struct_ty = self.type_inferred.expr_ty(idx).llvm_ty(self.context)?;
                 let val = self.builder.build_malloc(struct_ty, "val").ok()?;
                 for (i, &expr) in elements.iter().enumerate() {
                     let ptr = self.builder.build_struct_gep(struct_ty, val, i as u32, "tmp").ok()?;
@@ -401,7 +401,7 @@ impl<'ctx> Compiler<'ctx> {
                 Some(ret_val)
             },
             Expr::Index { main_expr, index_expr, range: _ } => {
-                let main_ty = &self.type_infer.expr_ty(main_expr);
+                let main_ty = &self.type_inferred.expr_ty(main_expr);
                 if main_ty == &Type::Str {
                     let i64_type = self.context.i64_type();
                     let i8_type = self.context.i8_type();
@@ -431,7 +431,8 @@ impl<'ctx> Compiler<'ctx> {
                 stmts.iter().map(|&stmt| self.compile_stmt(self.db.stmts[stmt].clone())).last().unwrap_or(Some(i8_type.const_int(0, false).into()))
             },
             Expr::NoneLiteral { range: _ } => {
-                todo!()
+                let ty = self.type_inferred.expr_ty(idx).llvm_ty(self.context)?.into_pointer_type();
+                Some(ty.const_null().into())
             },
             Expr::NumberLiteral { n, range: _ } => {
                 let i64_type = self.context.i64_type();

@@ -4,6 +4,7 @@ use inkwell::AddressSpace;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Type {
+    TyVar(usize),
     Unit,
     Int,
     Bool,
@@ -18,6 +19,7 @@ pub enum Type {
 impl Type {
     pub fn llvm_ty<'ctx>(&self, ctx: &'ctx Context) -> Option<BasicTypeEnum<'ctx>> {
         match self {
+            Type::TyVar(_) => None,
             Type::Unit => Some(ctx.i8_type().into()),
             Type::Int => Some(ctx.i64_type().into()),
             Type::Bool => Some(ctx.bool_type().into()),
@@ -38,6 +40,20 @@ impl Type {
             Type::Array(inner_ty) => Some(*inner_ty.clone()),
             Type::Option(inner_ty) => Some(*inner_ty.clone()),
             _ => None,
+        }
+    }
+    pub fn contains_ty_var(&self) -> bool {
+        match self {
+            Type::TyVar(_) => true,
+            Type::Unit => false,
+            Type::Int => false,
+            Type::Bool => false,
+            Type::Str => false,
+            Type::Char => false,
+            Type::Array(inner_ty) => inner_ty.contains_ty_var(),
+            Type::Tuple(inner_tys) => inner_tys.into_iter().any(Self::contains_ty_var),
+            Type::Option(inner_ty) => inner_ty.contains_ty_var(),
+            Type::Invalid => false,
         }
     }
 }

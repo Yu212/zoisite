@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::iter;
 
-use ecow::EcoString;
 use crate::hir::Identifier;
 use crate::r#type::Type;
 use crate::scope::{FnId, Scope, VarId};
+use ecow::EcoString;
 
 pub struct ResolveContext {
     pub global_scope: Scope,
@@ -12,6 +12,7 @@ pub struct ResolveContext {
     pub variables: Vec<VariableInfo>,
     pub functions: Vec<FuncInfo>,
     pub places: Vec<Place>,
+    next_ty_var_id: usize,
 }
 
 impl ResolveContext {
@@ -24,6 +25,7 @@ impl ResolveContext {
             variables: Vec::new(),
             functions: Vec::new(),
             places: vec![global_place, root_place],
+            next_ty_var_id: 0,
         }
     }
     pub fn define_builtins(&mut self) {
@@ -126,6 +128,11 @@ impl ResolveContext {
     }
     pub fn get_fn(&self, fn_id: FnId) -> &FuncInfo {
         &self.functions[fn_id.0]
+    }
+    pub fn new_ty_var(&mut self) -> Type {
+        let id = self.next_ty_var_id;
+        self.next_ty_var_id += 1;
+        Type::TyVar(id)
     }
 }
 

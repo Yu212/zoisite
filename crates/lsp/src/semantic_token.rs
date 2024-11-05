@@ -1,8 +1,8 @@
+use crate::backend::text_range_to_range;
 use ropey::Rope;
 use tower_lsp::lsp_types::{SemanticToken, SemanticTokenType};
 use zoisite::language::SyntaxToken;
 use zoisite::syntax_kind::SyntaxKind;
-use crate::backend::text_range_to_range;
 
 pub const LEGEND_TYPE: &[SemanticTokenType] = &[
     SemanticTokenType::STRING,
