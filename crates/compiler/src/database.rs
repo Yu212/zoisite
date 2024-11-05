@@ -158,11 +158,11 @@ impl Database {
     }
     pub fn lower_array_type(&mut self, ast: ast::ArrayTypeSpec) -> Type {
         let inner_ty = self.lower_type(ast.inner_ty());
-        Type::Array(Box::new(inner_ty))
+        inner_ty.wrap_in_array()
     }
     pub fn lower_option_type(&mut self, ast: ast::OptionTypeSpec) -> Type {
         let inner_ty = self.lower_type(ast.inner_ty());
-        Type::Option(Box::new(inner_ty))
+        inner_ty.wrap_in_option()
     }
     pub fn lower_tuple_type(&mut self, ast: ast::TupleTypeSpec) -> Type {
         Type::Tuple(ast.inner_tys().map(|inner_ty| self.lower_type(Some(inner_ty))).collect::<Vec<_>>())

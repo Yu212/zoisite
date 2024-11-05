@@ -28,14 +28,12 @@ impl TypeInferResult {
         self.substitute(&ty).into()
     }
 
-    fn substitute(&self, ty: &Type) -> Type {
-        match ty {
-            Type::TyVar(id) => self.subst.get(id).map_or(ty.clone(), |ty| self.substitute(ty)),
-            Type::Array(inner_ty) => Type::Array(Box::new(self.substitute(inner_ty))),
-            Type::Tuple(inner_ty) => Type::Tuple(inner_ty.iter().map(|ty| self.substitute(ty)).collect()),
-            Type::Option(inner_ty) => Type::Option(Box::new(self.substitute(inner_ty))),
-            _ => ty.clone(),
-        }
+    pub fn substitute(&self, ty: &Type) -> Type {
+        ty.substitute_with(&self.subst)
+    }
+
+    fn add_subst(&mut self, id: usize, ty: Type) {
+        self.subst.insert(id, ty);
     }
 }
 
@@ -85,10 +83,6 @@ impl TypeInfer<'_> {
         }, range));
     }
 
-    fn add_subst(&mut self, id: usize, ty: Type) {
-        self.inferred.subst.insert(id, ty);
-    }
-
     fn unify(&mut self, ty1: &Type, ty2: &Type, range: TextRange) -> Option<Type> {
         let ty1 = self.inferred.substitute(ty1);
         let ty2 = self.inferred.substitute(ty2);
@@ -98,16 +92,16 @@ impl TypeInfer<'_> {
             (&Type::Invalid, _) => Some(ty2),
             (&Type::TyVar(id1), &Type::TyVar(id2)) => {
                 if id1 != id2 {
-                    self.add_subst(id1, ty2.clone());
+                    self.inferred.add_subst(id1, ty2.clone());
                 }
                 Some(ty2)
             },
             (&Type::TyVar(id), _) => {
-                self.add_subst(id, ty2.clone());
+                self.inferred.add_subst(id, ty2.clone());
                 Some(ty2)
             },
             (_, &Type::TyVar(id)) => {
-                self.add_subst(id, ty1.clone());
+                self.inferred.add_subst(id, ty1.clone());
                 Some(ty1)
             },
             (&Type::Unit, &Type::Unit) => Some(Type::Unit),
@@ -149,7 +143,7 @@ impl TypeInfer<'_> {
         let var = self.db.resolve_ctx.get_var(var_id);
         self.ty_env.insert(var.id, ty_var.clone());
         if let Some(ref ty_hint) = var.ty_hint {
-            self.unify(&ty_var, &Type::from(ty_hint.clone()), range);
+            self.unify(&ty_var, &ty_hint.clone(), range);
         }
         ty_var
     }
@@ -182,7 +176,7 @@ impl Visitor for TypeInfer<'_> {
                     }
                     walk_stmt_idx(self, idx);
                     let block_ty = self.inferred.expr_ty(func.block);
-                    self.unify(&block_ty, &Type::from(func_info.return_ty), range);
+                    self.unify(&block_ty, &func_info.ty.return_ty, range);
                 } else {
                     walk_stmt_idx(self, idx);
                 }
@@ -253,11 +247,15 @@ impl Visitor for TypeInfer<'_> {
             Expr::FnCall { fn_id, args, range } => {
                 if let Some(fn_id) = fn_id {
                     let func = self.db.resolve_ctx.get_fn(fn_id);
-                    let return_ty = Type::from(func.return_ty.clone());
-                    let args_with_ty = args.iter().zip(func.params_ty.clone());
+                    let fn_ty = func.ty.clone();
+                    eprintln!("{:?}", fn_ty);
+                    let fn_ty = fn_ty.instantiate(&mut self.db.resolve_ctx);
+                    eprintln!("{:?}", fn_ty);
+                    let return_ty = fn_ty.return_ty.clone();
+                    let args_with_ty = args.iter().zip(fn_ty.params_ty.clone());
                     for (&arg, ty) in args_with_ty {
                         let args_ty = self.inferred.expr_ty(arg);
-                        self.unify(&args_ty, &Type::from(ty), range);
+                        self.unify(&args_ty, &ty, range);
                     }
                     return_ty
                 } else {
@@ -271,7 +269,7 @@ impl Visitor for TypeInfer<'_> {
                 let ret_ty = self.db.resolve_ctx.new_ty_var();
                 match main_ty {
                     Type::Str => self.unify(&ret_ty, &Type::Char, range),
-                    _ => self.unify(&main_ty, &Type::Array(Box::new(ret_ty.clone())), range),
+                    _ => self.unify(&main_ty, &ret_ty.clone().wrap_in_array(), range),
                 };
                 ret_ty
             },
@@ -286,7 +284,7 @@ impl Visitor for TypeInfer<'_> {
                     unreachable!()
                 }
             },
-            Expr::NoneLiteral { range: _ } => Type::Option(Box::new(self.db.resolve_ctx.new_ty_var())),
+            Expr::NoneLiteral { range: _ } => self.db.resolve_ctx.new_ty_var().wrap_in_option(),
             Expr::NumberLiteral { n: _, range: _ } => Type::Int,
             Expr::BoolLiteral { val: _, range: _ } => Type::Bool,
             Expr::StringLiteral { val: _, range: _ } => Type::Str,
@@ -295,7 +293,7 @@ impl Visitor for TypeInfer<'_> {
                 for len_expr in len {
                     let len_ty = self.inferred.expr_ty(len_expr);
                     self.unify(&len_ty, &Type::Int, range);
-                    ty = Type::Array(Box::new(ty))
+                    ty = ty.wrap_in_array();
                 }
                 ty
             },

@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::iter;
 
 use crate::hir::Identifier;
-use crate::r#type::Type;
+use crate::r#type::{FuncType, Type};
 use crate::scope::{FnId, Scope, VarId};
 use ecow::EcoString;
 
@@ -63,8 +63,7 @@ impl ResolveContext {
             id,
             params,
             place,
-            params_ty,
-            return_ty,
+            ty: FuncType::new(params_ty, return_ty),
         };
         self.functions.push(fun_info.clone());
         fun_info
@@ -83,8 +82,7 @@ impl ResolveContext {
             id,
             params,
             place,
-            params_ty,
-            return_ty,
+            ty: FuncType::new(params_ty, return_ty),
         };
         self.functions.push(fun_info.clone());
         fun_info
@@ -151,8 +149,7 @@ pub struct FuncInfo {
     pub id: FnId,
     pub params: Vec<VarId>,
     pub place: Place,
-    pub params_ty: Vec<Type>,
-    pub return_ty: Type,
+    pub ty: FuncType,
 }
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]

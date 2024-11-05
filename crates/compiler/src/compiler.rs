@@ -244,8 +244,8 @@ impl<'ctx> Compiler<'ctx> {
 
     fn compile_func(&mut self, func: Func) {
         if let Some(fn_info) = func.fn_info {
-            let params_type: Vec<_> = fn_info.params_ty.iter().map(|ty| ty.llvm_ty(self.context).unwrap().into()).collect();
-            let return_ty = fn_info.return_ty.llvm_ty(self.context).unwrap();
+            let params_type: Vec<_> = fn_info.ty.params_ty.iter().map(|ty| ty.llvm_ty(self.context).unwrap().into()).collect();
+            let return_ty = fn_info.ty.return_ty.llvm_ty(self.context).unwrap();
             let func_type = return_ty.fn_type(params_type.as_slice(), false);
             let func_value = self.module.add_function(fn_info.name.as_str(), func_type, None);
             self.functions.insert(fn_info.id, func_value);
