@@ -36,6 +36,8 @@ impl ResolveContext {
         self.define_global_fn(EcoString::from("chr"), vec![EcoString::from("n")], vec![Type::Int], Type::Char);
         self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
         self.define_global_fn(EcoString::from("str"), vec![EcoString::from("n")], vec![Type::Int], Type::Str);
+        let a = self.new_ty_var();
+        self.define_global_fn(EcoString::from("some"), vec![EcoString::from("val")], vec![a.clone()], a.wrap_in_option());
     }
     pub fn define_var(&mut self, name: EcoString, ident: Option<Identifier>, ty_hint: Option<Type>) -> VarId {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -64,6 +66,7 @@ impl ResolveContext {
             params,
             place,
             ty: FuncType::new(params_ty, return_ty),
+            instances: Vec::new(),
         };
         self.functions.push(fun_info.clone());
         fun_info
@@ -83,6 +86,7 @@ impl ResolveContext {
             params,
             place,
             ty: FuncType::new(params_ty, return_ty),
+            instances: Vec::new(),
         };
         self.functions.push(fun_info.clone());
         fun_info
@@ -108,6 +112,10 @@ impl ResolveContext {
         self.scope_stack.iter().rev()
             .chain(iter::once(&self.global_scope))
             .find_map(|scope| scope.resolve_fn(name, num_params))
+    }
+    pub fn add_instance(&mut self, fn_id: FnId, instance: &FuncType) {
+        let fn_info = &mut self.functions[fn_id.0];
+        fn_info.instances.push(instance.clone());
     }
     pub fn push_scope(&mut self, update_place: bool) {
         let scope = self.scope_stack.last_mut().unwrap();
@@ -150,6 +158,7 @@ pub struct FuncInfo {
     pub params: Vec<VarId>,
     pub place: Place,
     pub ty: FuncType,
+    pub instances: Vec<FuncType>,
 }
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]

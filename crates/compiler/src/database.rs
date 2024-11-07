@@ -7,7 +7,7 @@ use rowan::ast::AstNode;
 use crate::ast;
 use crate::ast::TypeSpec;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
-use crate::hir::{BinaryOp, Expr, Func, Identifier, Root, Stmt, UnaryOp};
+use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Identifier, Root, Stmt, UnaryOp};
 use crate::language::SyntaxToken;
 use crate::r#type::Type;
 use crate::resolve_context::ResolveContext;
@@ -61,7 +61,7 @@ impl Database {
         let block = self.lower_expr(ast.block());
         let func = Func {
             fn_info,
-            block: self.exprs.alloc(block),
+            block,
             range: ast.syntax().text_range(),
         };
         self.resolve_ctx.pop_scope();
@@ -97,7 +97,7 @@ impl Database {
         };
         Stmt::LetStmt {
             var_id,
-            expr: self.exprs.alloc(expr),
+            expr,
             range: ast.syntax().text_range(),
         }
     }
@@ -107,8 +107,8 @@ impl Database {
         let block = self.lower_expr(ast.block());
         self.loop_nest -= 1;
         Stmt::WhileStmt {
-            cond: self.exprs.alloc(cond),
-            block: self.exprs.alloc(block),
+            cond,
+            block,
             range: ast.syntax().text_range(),
         }
     }
@@ -133,7 +133,7 @@ impl Database {
     pub fn lower_expr_stmt(&mut self, ast: ast::ExprStmt) -> Stmt {
         let expr = self.lower_expr(ast.expr());
         Stmt::ExprStmt {
-            expr: self.exprs.alloc(expr),
+            expr,
             range: ast.syntax().text_range(),
         }
     }
@@ -167,11 +167,11 @@ impl Database {
     pub fn lower_tuple_type(&mut self, ast: ast::TupleTypeSpec) -> Type {
         Type::Tuple(ast.inner_tys().map(|inner_ty| self.lower_type(Some(inner_ty))).collect::<Vec<_>>())
     }
-    pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> Expr {
-        match ast {
+    pub fn lower_expr(&mut self, ast: Option<ast::Expr>) -> ExprIdx {
+        let expr = match ast {
             Some(ast::Expr::BinaryExpr(ast)) => self.lower_binary_expr(ast),
             Some(ast::Expr::PrefixExpr(ast)) => self.lower_prefix_expr(ast),
-            Some(ast::Expr::ParenExpr(ast)) => self.lower_expr(ast.expr()),
+            Some(ast::Expr::ParenExpr(ast)) => return self.lower_expr(ast.expr()),
             Some(ast::Expr::TupleExpr(ast)) => self.lower_tuple_expr(ast),
             Some(ast::Expr::RefExpr(ast)) => self.lower_ref_expr(ast),
             Some(ast::Expr::IfExpr(ast)) => self.lower_if_expr(ast),
@@ -183,13 +183,14 @@ impl Database {
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             Some(ast::Expr::StringLiteral(ast)) => self.lower_string_literal(ast),
             Some(ast::Expr::ArrayLiteral(ast)) => self.lower_array_literal(ast),
-            None => Expr::Missing
-        }
+            None => Expr::Missing,
+        };
+        self.exprs.alloc(expr)
     }
-    pub fn is_lvalue(&self, expr: &Expr) -> bool {
-        match expr {
+    pub fn is_lvalue(&self, expr: &ExprIdx) -> bool {
+        match self.exprs[*expr] {
             Expr::Ref { var_id: _, range: _ } => true,
-            Expr::Index { main_expr, index_expr: _, range: _ } => self.is_lvalue(&self.exprs[*main_expr]),
+            Expr::Index { main_expr, index_expr: _, range: _ } => self.is_lvalue(&main_expr),
             _ => false,
         }
     }
@@ -219,8 +220,8 @@ impl Database {
         }
         Expr::Binary {
             op,
-            lhs: self.exprs.alloc(lhs),
-            rhs: self.exprs.alloc(rhs),
+            lhs,
+            rhs,
             range: ast.syntax().text_range(),
         }
     }
@@ -228,15 +229,12 @@ impl Database {
         let expr = self.lower_expr(ast.expr());
         Expr::Unary {
             op: UnaryOp::Neg,
-            expr: self.exprs.alloc(expr),
+            expr,
             range: ast.syntax().text_range(),
         }
     }
     pub fn lower_tuple_expr(&mut self, ast: ast::TupleExpr) -> Expr {
-        let elements: Vec<_> = ast.elements().map(|expr| {
-            let temp = self.lower_expr(Some(expr));
-            self.exprs.alloc(temp)
-        }).collect();
+        let elements: Vec<_> = ast.elements().map(|expr| self.lower_expr(Some(expr))).collect();
         Expr::Tuple {
             elements,
             range: ast.syntax().text_range(),
@@ -258,34 +256,31 @@ impl Database {
         let then_expr = self.lower_expr(ast.then_expr());
         let else_expr = ast.else_expr().map(|expr| self.lower_expr(Some(expr)));
         Expr::If {
-            cond: self.exprs.alloc(cond),
-            then_expr: self.exprs.alloc(then_expr),
-            else_expr: else_expr.map(|expr| self.exprs.alloc(expr)),
+            cond,
+            then_expr,
+            else_expr,
             range: ast.syntax().text_range(),
         }
     }
     pub fn lower_fn_call_expr(&mut self, ast: ast::FnCallExpr) -> Expr {
-        let args: Vec<_> = ast.args().map(|expr| {
-            let temp = self.lower_expr(Some(expr));
-            self.exprs.alloc(temp)
-        }).collect();
+        let args: Vec<_> = ast.args().map(|expr| self.lower_expr(Some(expr))).collect();
         let fn_id = self.lower_ident(ast.ident()).and_then(|ident| self.resolve_ctx.resolve_fn(&ident.name, args.len()));
+        let range = ast.syntax().text_range();
         if fn_id.is_none() {
-            let range = ast.syntax().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::UndeclaredFunction, range));
         }
         Expr::FnCall {
             fn_id,
             args,
-            range: ast.syntax().text_range(),
+            range,
         }
     }
     pub fn lower_index_expr(&mut self, ast: ast::IndexExpr) -> Expr {
         let main_expr = self.lower_expr(ast.main());
         let index_expr = self.lower_expr(ast.index());
         Expr::Index {
-            main_expr: self.exprs.alloc(main_expr),
-            index_expr: self.exprs.alloc(index_expr),
+            main_expr,
+            index_expr,
             range: ast.syntax().text_range(),
         }
     }
@@ -334,8 +329,8 @@ impl Database {
         let len: Vec<_> = ast.len().map(|len_expr| self.lower_expr(Some(len_expr))).collect();
         let initial = self.lower_expr(ast.initial());
         Expr::ArrayLiteral {
-            len: len.iter().map(|len_expr| self.exprs.alloc(len_expr.clone())).collect(),
-            initial: self.exprs.alloc(initial),
+            len,
+            initial,
             range: ast.syntax().text_range(),
         }
     }

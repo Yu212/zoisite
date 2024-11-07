@@ -1,3 +1,8 @@
+use crate::database::Database;
+use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
+use crate::r#type::{FuncType, Type};
+use crate::scope::{FnId, VarId};
+use crate::type_infer::TypeInferResult;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::{Builder, BuilderError};
 use inkwell::context::Context;
@@ -7,19 +12,13 @@ use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, Int
 use inkwell::{AddressSpace, IntPredicate};
 use std::collections::HashMap;
 
-use crate::database::Database;
-use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
-use crate::r#type::Type;
-use crate::scope::{FnId, VarId};
-use crate::type_infer::TypeInferResult;
-
 pub struct Compiler<'ctx> {
     pub db: &'ctx Database,
     pub context: &'ctx Context,
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
     pub addresses: HashMap<VarId, PointerValue<'ctx>>,
-    pub functions: HashMap<FnId, FunctionValue<'ctx>>,
+    pub functions: HashMap<(FnId, FuncType), FunctionValue<'ctx>>,
     pub cur_function: Option<FunctionValue<'ctx>>,
     pub loop_stack: Vec<(BasicBlock<'ctx>, BasicBlock<'ctx>)>,
     pub type_inferred: TypeInferResult,
@@ -88,7 +87,8 @@ impl<'ctx> Compiler<'ctx> {
             let param = print_fn.get_first_param().unwrap();
             self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), param.into()], "").unwrap();
             self.builder.build_return(Some(&i8_type.const_int(0, false))).unwrap();
-            self.functions.insert(FnId(0), print_fn);
+            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(0));
+            self.functions.insert((FnId(0), print_fn_info.ty.clone()), print_fn);
         }
         {
             let print_type = i8_type.fn_type(&[str_type.into()], false);
@@ -105,7 +105,8 @@ impl<'ctx> Compiler<'ctx> {
 
             self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), ptr.into()], "").unwrap();
             self.builder.build_return(Some(&i8_type.const_int(0, false))).unwrap();
-            self.functions.insert(FnId(1), print_fn);
+            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(1));
+            self.functions.insert((FnId(1), print_fn_info.ty.clone()), print_fn);
         }
         {
             let input_type = i64_type.fn_type(&[], false);
@@ -117,7 +118,9 @@ impl<'ctx> Compiler<'ctx> {
             self.builder.build_call(scanf_function, &[format_str.as_pointer_value().into(), scanf_ptr.into()], "").unwrap();
             let val = self.builder.build_load(i64_type, scanf_ptr, "tmp").unwrap();
             self.builder.build_return(Some(&val)).unwrap();
-            self.functions.insert(FnId(2), input_fn);
+
+            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(2));
+            self.functions.insert((FnId(2), input_fn_info.ty.clone()), input_fn);
         }
         {
             let input_type = str_type.fn_type(&[i64_type.into()], false);
@@ -134,7 +137,8 @@ impl<'ctx> Compiler<'ctx> {
             let result = self.build_str_struct(len.into_int_value(), scanf_ptr).unwrap();
 
             self.builder.build_return(Some(&result)).unwrap();
-            self.functions.insert(FnId(3), input_fn);
+            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(3));
+            self.functions.insert((FnId(3), input_fn_info.ty.clone()), input_fn);
         }
         {
             let chr_type = i8_type.fn_type(&[i64_type.into()], false);
@@ -144,7 +148,8 @@ impl<'ctx> Compiler<'ctx> {
             let param = chr_fn.get_first_param().unwrap().into_int_value();
             let ret_val = self.builder.build_int_truncate(param, i8_type, "tmp").unwrap();
             self.builder.build_return(Some(&ret_val)).unwrap();
-            self.functions.insert(FnId(4), chr_fn);
+            let chr_fn_info = self.db.resolve_ctx.get_fn(FnId(4));
+            self.functions.insert((FnId(4), chr_fn_info.ty.clone()), chr_fn);
         }
         {
             let ord_type = i64_type.fn_type(&[i8_type.into()], false);
@@ -154,7 +159,8 @@ impl<'ctx> Compiler<'ctx> {
             let param = ord_fn.get_first_param().unwrap().into_int_value();
             let ret_val = self.builder.build_int_z_extend(param, i64_type, "tmp").unwrap();
             self.builder.build_return(Some(&ret_val)).unwrap();
-            self.functions.insert(FnId(5), ord_fn);
+            let ord_fn_info = self.db.resolve_ctx.get_fn(FnId(5));
+            self.functions.insert((FnId(5), ord_fn_info.ty.clone()), ord_fn);
         }
         {
             let str_type = str_type.fn_type(&[i64_type.into()], false);
@@ -171,8 +177,31 @@ impl<'ctx> Compiler<'ctx> {
             let result = self.build_str_struct(len.into_int_value(), sprintf_ptr).unwrap();
 
             self.builder.build_return(Some(&result)).unwrap();
-            self.functions.insert(FnId(6), str_fn);
+            let str_fn_info = self.db.resolve_ctx.get_fn(FnId(6));
+            self.functions.insert((FnId(6), str_fn_info.ty.clone()), str_fn);
         }
+        {
+            let some_fn_info = self.db.resolve_ctx.get_fn(FnId(7));
+            for instance in &some_fn_info.instances {
+                let some_fn = self.build_some_fn(&instance).unwrap();
+                self.functions.insert((FnId(7), instance.clone()), some_fn);
+            }
+        }
+    }
+
+    pub fn build_some_fn(&mut self, func_ty: &FuncType) -> Result<FunctionValue<'ctx>, BuilderError> {
+        let ty = func_ty.params_ty.first().unwrap();
+        let llvm_ty = ty.llvm_ty(self.context).unwrap();
+        let some_type = llvm_ty.ptr_type(AddressSpace::default()).fn_type(&[llvm_ty.clone().into()], false);
+        let mangled_name = format!("some#{}", func_ty.mangle());
+        let some_fn = self.module.add_function(&mangled_name, some_type, None);
+        let basic_block = self.context.append_basic_block(some_fn, "entry");
+        self.builder.position_at_end(basic_block);
+        let param = some_fn.get_first_param().unwrap();
+        let ptr = self.builder.build_malloc(llvm_ty.clone(), "ptr")?;
+        self.builder.build_store(ptr, param)?;
+        self.builder.build_return(Some(&ptr))?;
+        Ok(some_fn)
     }
 
     fn compile_stmt(&mut self, stmt: Stmt) -> Option<BasicValueEnum<'ctx>> {
@@ -248,7 +277,7 @@ impl<'ctx> Compiler<'ctx> {
             let return_ty = fn_info.ty.return_ty.llvm_ty(self.context).unwrap();
             let func_type = return_ty.fn_type(params_type.as_slice(), false);
             let func_value = self.module.add_function(fn_info.name.as_str(), func_type, None);
-            self.functions.insert(fn_info.id, func_value);
+            self.functions.insert((fn_info.id, fn_info.ty), func_value);
             self.cur_function = Some(func_value);
             let basic_block = self.context.append_basic_block(func_value, "entry");
             self.builder.position_at_end(basic_block);
@@ -391,7 +420,8 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::FnCall { fn_id, args, range: _ } => {
                 let fn_id = fn_id?;
-                let function = self.functions[&fn_id];
+                let fn_ty = self.type_inferred.fn_calls.get(idx)?.clone();
+                let function = self.functions[&(fn_id, fn_ty)];
                 let args: Vec<_> = args.iter()
                     .filter_map(|&expr| self.compile_expr_idx(expr))
                     .map(|expr| BasicMetadataValueEnum::from(expr))

@@ -57,7 +57,7 @@ pub fn parse(text: &str) -> (Vec<SyntaxToken>, hir::Root, Vec<Diagnostic>) {
         return (tokens, hir, [lexer_errors, parser_errors, lower_errors].concat());
     }
     let type_infer = TypeInfer::new(&mut db);
-    let (_, type_check_errors) = type_infer.check(hir.clone());
+    let (_, type_check_errors) = type_infer.infer(hir.clone());
     if !type_check_errors.is_empty() {
         return (tokens, hir, type_check_errors);
     }
@@ -76,7 +76,7 @@ pub fn compile_no_output(text: &str) {
         return;
     }
     let type_infer = TypeInfer::new(&mut db);
-    let (type_inferred, type_check_errors) = type_infer.check(hir.clone());
+    let (type_inferred, type_check_errors) = type_infer.infer(hir.clone());
     if !type_check_errors.is_empty() {
         return;
     }
@@ -116,7 +116,7 @@ pub fn compile(text: &str) {
         return;
     }
     let type_infer = TypeInfer::new(&mut db);
-    let (type_inferred, type_check_errors) = type_infer.check(hir.clone());
+    let (type_inferred, type_check_errors) = type_infer.infer(hir.clone());
     eprintln!("type check errors: ");
     for err in &type_check_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range));

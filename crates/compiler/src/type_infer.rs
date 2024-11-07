@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-
+use itertools::Itertools;
 use la_arena::ArenaMap;
 use rowan::TextRange;
+use std::collections::HashMap;
 
 use crate::database::Database;
 use crate::diagnostic::{Diagnostic, DiagnosticKind};
 use crate::hir::{BinaryOp, Expr, ExprIdx, Root, Stmt, StmtIdx, UnaryOp};
-use crate::r#type::Type;
+use crate::r#type::{FuncType, Type};
 use crate::scope::VarId;
 use crate::visitor::{walk_expr_idx, walk_stmt_idx, Visitor};
 
@@ -19,7 +19,8 @@ pub struct TypeInfer<'db> {
 
 pub struct TypeInferResult {
     expr_tys: ArenaMap<ExprIdx, Type>,
-    subst: HashMap<usize, Type>,
+    pub fn_calls: ArenaMap<ExprIdx, FuncType>,
+    pub subst: HashMap<usize, Type>,
 }
 
 impl TypeInferResult {
@@ -29,6 +30,10 @@ impl TypeInferResult {
     }
 
     pub fn substitute(&self, ty: &Type) -> Type {
+        ty.substitute_with(&self.subst)
+    }
+
+    pub fn substitute_func(&self, ty: &FuncType) -> FuncType {
         ty.substitute_with(&self.subst)
     }
 
@@ -44,13 +49,14 @@ impl TypeInfer<'_> {
             diagnostics: Vec::new(),
             inferred: TypeInferResult {
                 expr_tys: ArenaMap::default(),
+                fn_calls: ArenaMap::default(),
                 subst: Default::default(),
             },
             ty_env: Default::default(),
         }
     }
 
-    pub fn check(mut self, root: Root) -> (TypeInferResult, Vec<Diagnostic>) {
+    pub fn infer(mut self, root: Root) -> (TypeInferResult, Vec<Diagnostic>) {
         self.visit_root(root);
         for (&var_id, ty) in self.ty_env.iter() {
             let var_info = self.db.resolve_ctx.get_var(var_id);
@@ -65,6 +71,10 @@ impl TypeInfer<'_> {
                 var_info.ty.replace(inferred.into());
             }
         }
+        for fn_info in &mut self.db.resolve_ctx.functions {
+            fn_info.instances = fn_info.instances.iter().map(|instance| self.inferred.substitute_func(instance)).unique().collect();
+        }
+        self.inferred.fn_calls = self.inferred.fn_calls.iter().map(|(key, fn_ty)| (key, fn_ty.substitute_with(&self.inferred.subst))).collect();
         (self.inferred, self.diagnostics.clone())
     }
 
@@ -248,15 +258,15 @@ impl Visitor for TypeInfer<'_> {
                 if let Some(fn_id) = fn_id {
                     let func = self.db.resolve_ctx.get_fn(fn_id);
                     let fn_ty = func.ty.clone();
-                    eprintln!("{:?}", fn_ty);
                     let fn_ty = fn_ty.instantiate(&mut self.db.resolve_ctx);
-                    eprintln!("{:?}", fn_ty);
+                    self.db.resolve_ctx.add_instance(fn_id, &fn_ty);
                     let return_ty = fn_ty.return_ty.clone();
                     let args_with_ty = args.iter().zip(fn_ty.params_ty.clone());
                     for (&arg, ty) in args_with_ty {
                         let args_ty = self.inferred.expr_ty(arg);
                         self.unify(&args_ty, &ty, range);
                     }
+                    self.inferred.fn_calls.insert(idx, fn_ty);
                     return_ty
                 } else {
                     unreachable!()

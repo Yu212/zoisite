@@ -2,10 +2,11 @@ use crate::resolve_context::ResolveContext;
 use inkwell::context::Context;
 use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::AddressSpace;
-use std::collections::{HashMap, HashSet};
+use itertools::Itertools;
+use std::collections::{BTreeSet, HashMap};
 use std::iter::once;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Type {
     TyVar(usize),
     Unit,
@@ -74,18 +75,32 @@ impl Type {
             _ => self.clone(),
         }
     }
-    pub fn list_ty_var(&self) -> HashSet<usize> {
+    pub fn list_ty_var(&self) -> BTreeSet<usize> {
         match self {
-            Type::TyVar(ty_var_id) => HashSet::from([*ty_var_id]),
+            Type::TyVar(ty_var_id) => BTreeSet::from([*ty_var_id]),
             Type::Array(inner_ty) => inner_ty.list_ty_var(),
             Type::Tuple(inner_tys) => inner_tys.into_iter().flat_map(|inner_ty| inner_ty.list_ty_var()).collect(),
             Type::Option(inner_ty) => inner_ty.list_ty_var(),
-            _ => HashSet::new(),
+            _ => BTreeSet::new(),
+        }
+    }
+    pub fn mangle(&self) -> String {
+        match self {
+            Type::TyVar(_) => "a".to_owned(),
+            Type::Unit => "u".to_owned(),
+            Type::Int => "i".to_owned(),
+            Type::Bool => "b".to_owned(),
+            Type::Str => "s".to_owned(),
+            Type::Char => "c".to_owned(),
+            Type::Array(inner_ty) => inner_ty.mangle() + "[]",
+            Type::Tuple(inner_tys) => inner_tys.into_iter().map(Self::mangle).join(""),
+            Type::Option(inner_ty) => inner_ty.mangle() + "?",
+            Type::Invalid => "x".to_owned(),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct FuncType {
     pub params_ty: Vec<Type>,
     pub return_ty: Type,
@@ -93,16 +108,27 @@ pub struct FuncType {
 
 impl FuncType {
     pub fn new(params_ty: Vec<Type>, return_ty: Type) -> Self {
-        FuncType {
+        Self {
             params_ty,
             return_ty,
         }
     }
+    pub fn ty_vars(&self) -> BTreeSet<usize> {
+        self.params_ty.iter().chain(once(&self.return_ty)).flat_map(|ty| ty.list_ty_var()).collect()
+    }
     pub fn instantiate(&self, resolve_ctx: &mut ResolveContext) -> Self {
-        let ty_vars = self.params_ty.iter().chain(once(&self.return_ty)).flat_map(|ty| ty.list_ty_var());
-        let ty_vars_subst = ty_vars.into_iter().map(|ty_var_id| (ty_var_id, resolve_ctx.new_ty_var())).collect();
+        let ty_vars_subst = self.ty_vars().into_iter().map(|ty_var_id| (ty_var_id, resolve_ctx.new_ty_var())).collect();
         let params_ty = self.params_ty.iter().map(|ty| ty.substitute_with(&ty_vars_subst)).collect();
         let return_ty = self.return_ty.substitute_with(&ty_vars_subst);
         Self::new(params_ty, return_ty)
+    }
+    pub fn substitute_with(&self, subst: &HashMap<usize, Type>) -> Self {
+        Self {
+            params_ty: self.params_ty.iter().map(|ty| ty.substitute_with(subst)).collect(),
+            return_ty: self.return_ty.substitute_with(subst),
+        }
+    }
+    pub fn mangle(&self) -> String {
+        format!("{}:{}", self.params_ty.iter().map(Type::mangle).join(""), self.return_ty.mangle())
     }
 }
