@@ -82,7 +82,7 @@ pub fn compile_no_output(text: &str) {
     }
     let context = Context::create();
     let compiler = Compiler::new(&context, &db, type_inferred, "main");
-    let module = compiler.compile(&hir);
+    let module = compiler.compile(&hir).expect("An error occurred during compilation");
     let engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
     unsafe {
         engine.get_function::<unsafe extern "C" fn() -> i32>("main").unwrap().call();
@@ -126,7 +126,7 @@ pub fn compile(text: &str) {
     }
     let context = Context::create();
     let compiler = Compiler::new(&context, &db, type_inferred, "main");
-    let module = compiler.compile(&hir);
+    let module = compiler.compile(&hir).expect("An error occurred during compilation");
     println!("compile: {} ms", start.elapsed().as_millis());
     module.print_to_file(PathBuf::from("output.ll")).expect("print_to_file failed");
     optimize(&module);
