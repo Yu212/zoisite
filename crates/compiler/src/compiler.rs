@@ -325,14 +325,30 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::Index { main_expr, index_expr, range: _ } => {
                 let main_ty = &self.type_inferred.expr_ty(main_expr);
-                let inner_ty = main_ty.inner_ty().ok_or(self.compiler_error("Indexed values do not have an inner type"))?;
-                let inner_ty = self.compile_ty(&inner_ty)?;
-                let main_ty = self.compile_ty(main_ty)?;
-                let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
-                let main_val = self.builder.build_load(main_ty, lvalue, "tmp")?.into_pointer_value();
-                let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
-                let ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr")? };
-                Ok(ptr)
+                if main_ty == &Type::Str {
+                    let i64_type = self.context.i64_type();
+                    let i8_type = self.context.i8_type();
+                    let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
+                    let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
+
+                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
+                    let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
+
+                    let ptr_ptr = self.builder.build_struct_gep(str_type, lvalue, 1, "ptr")?;
+                    let ptr = self.builder.build_load(i8_ptr_type, ptr_ptr, "str")?;
+                    let val_ptr = unsafe { self.builder.build_gep(i8_type, ptr.into_pointer_value(), &[index_val], "ptr")? };
+
+                    Ok(val_ptr)
+                } else {
+                    let inner_ty = main_ty.inner_ty().ok_or(self.compiler_error("Indexed values do not have an inner type"))?;
+                    let inner_ty = self.compile_ty(&inner_ty)?;
+                    let main_ty = self.compile_ty(main_ty)?;
+                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
+                    let main_val = self.builder.build_load(main_ty, lvalue, "tmp")?.into_pointer_value();
+                    let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
+                    let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr")? };
+                    Ok(val_ptr)
+                }
             },
             _ => unreachable!()
         }
