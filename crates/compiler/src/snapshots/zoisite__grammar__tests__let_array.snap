@@ -26,16 +26,16 @@ expression: "parse(\"let a: int[][] = [[1; 2]; 3];\")"
           OpenBracket@17..18 "["
           ArrayLiteral@18..24
             OpenBracket@18..19 "["
-            NumberLiteral@19..20
+            IntLiteral@19..20
               Number@19..20 "1"
             Semicolon@20..21 ";"
             Whitespace@21..22 " "
-            NumberLiteral@22..23
+            IntLiteral@22..23
               Number@22..23 "2"
             CloseBracket@23..24 "]"
           Semicolon@24..25 ";"
           Whitespace@25..26 " "
-          NumberLiteral@26..27
+          IntLiteral@26..27
             Number@26..27 "3"
           CloseBracket@27..28 "]"
       Semicolon@28..29 ";"

@@ -101,7 +101,8 @@ asts! {
         IndexExpr,
         BlockExpr,
         NoneLiteral,
-        NumberLiteral,
+        IntLiteral,
+        FloatLiteral,
         BoolLiteral,
         StringLiteral,
         ArrayLiteral,
@@ -288,8 +289,14 @@ impl BlockExpr {
 impl NoneLiteral {
 }
 
-impl NumberLiteral {
+impl IntLiteral {
     pub fn parse(&self) -> Option<u64> {
+        self.0.first_token()?.text().parse().ok()
+    }
+}
+
+impl FloatLiteral {
+    pub fn parse(&self) -> Option<f64> {
         self.0.first_token()?.text().parse().ok()
     }
 }

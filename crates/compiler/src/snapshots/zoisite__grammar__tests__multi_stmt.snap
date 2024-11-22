@@ -5,17 +5,17 @@ expression: "parse(\"1; 2; 3;\")"
 (
     Root@0..8
       ExprStmt@0..1
-        NumberLiteral@0..1
+        IntLiteral@0..1
           Number@0..1 "1"
       Semicolon@1..2 ";"
       Whitespace@2..3 " "
       ExprStmt@3..4
-        NumberLiteral@3..4
+        IntLiteral@3..4
           Number@3..4 "2"
       Semicolon@4..5 ";"
       Whitespace@5..6 " "
       ExprStmt@6..7
-        NumberLiteral@6..7
+        IntLiteral@6..7
           Number@6..7 "3"
       Semicolon@7..8 ";"
     ,

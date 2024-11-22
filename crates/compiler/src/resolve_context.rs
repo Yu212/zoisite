@@ -30,12 +30,14 @@ impl ResolveContext {
     }
     pub fn define_builtins(&mut self) {
         self.define_global_fn(EcoString::from("printInt"), vec![EcoString::from("n")], vec![Type::Int], Type::Unit);
+        self.define_global_fn(EcoString::from("printFloat"), vec![EcoString::from("n")], vec![Type::Float], Type::Unit);
         self.define_global_fn(EcoString::from("printStr"), vec![EcoString::from("n")], vec![Type::Str], Type::Unit);
         self.define_global_fn(EcoString::from("inputInt"), vec![], vec![], Type::Int);
         self.define_global_fn(EcoString::from("inputStr"), vec![EcoString::from("len")], vec![Type::Int], Type::Str);
         self.define_global_fn(EcoString::from("chr"), vec![EcoString::from("n")], vec![Type::Int], Type::Char);
         self.define_global_fn(EcoString::from("ord"), vec![EcoString::from("ch")], vec![Type::Char], Type::Int);
         self.define_global_fn(EcoString::from("str"), vec![EcoString::from("n")], vec![Type::Int], Type::Str);
+        self.define_global_fn(EcoString::from("float"), vec![EcoString::from("n")], vec![Type::Int], Type::Float);
         let a = self.new_ty_var();
         self.define_global_fn(EcoString::from("some"), vec![EcoString::from("val")], vec![a.clone()], a.wrap_in_option());
     }
@@ -94,6 +96,7 @@ impl ResolveContext {
     pub fn resolve_ty(&mut self, name: &EcoString) -> Type {
         match name.as_str() {
             "int" => Type::Int,
+            "float" => Type::Float,
             "bool" => Type::Bool,
             "str" => Type::Str,
             "char" => Type::Char,

@@ -98,8 +98,12 @@ pub enum Expr {
     NoneLiteral {
         range: TextRange,
     },
-    NumberLiteral {
+    IntLiteral {
         n: Option<u64>,
+        range: TextRange,
+    },
+    FloatLiteral {
+        n: Option<f64>,
         range: TextRange,
     },
     BoolLiteral {

@@ -179,7 +179,8 @@ impl Database {
             Some(ast::Expr::IndexExpr(ast)) => self.lower_index_expr(ast),
             Some(ast::Expr::BlockExpr(ast)) => self.lower_block_expr(ast),
             Some(ast::Expr::NoneLiteral(ast)) => self.lower_none_literal(ast),
-            Some(ast::Expr::NumberLiteral(ast)) => self.lower_number_literal(ast),
+            Some(ast::Expr::IntLiteral(ast)) => self.lower_int_literal(ast),
+            Some(ast::Expr::FloatLiteral(ast)) => self.lower_float_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             Some(ast::Expr::StringLiteral(ast)) => self.lower_string_literal(ast),
             Some(ast::Expr::ArrayLiteral(ast)) => self.lower_array_literal(ast),
@@ -301,13 +302,24 @@ impl Database {
             range: ast.syntax().text_range(),
         }
     }
-    pub fn lower_number_literal(&mut self, ast: ast::NumberLiteral) -> Expr {
+    pub fn lower_int_literal(&mut self, ast: ast::IntLiteral) -> Expr {
         let parsed = ast.parse();
         if parsed.is_none() {
             let range = ast.syntax().first_token().unwrap().text_range();
             self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, range));
         }
-        Expr::NumberLiteral {
+        Expr::IntLiteral {
+            n: parsed,
+            range: ast.syntax().text_range(),
+        }
+    }
+    pub fn lower_float_literal(&mut self, ast: ast::FloatLiteral) -> Expr {
+        let parsed = ast.parse();
+        if parsed.is_none() {
+            let range = ast.syntax().first_token().unwrap().text_range();
+            self.diagnostics.push(Diagnostic::new(DiagnosticKind::NumberTooLarge, range));
+        }
+        Expr::FloatLiteral {
             n: parsed,
             range: ast.syntax().text_range(),
         }

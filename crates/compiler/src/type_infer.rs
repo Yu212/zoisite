@@ -116,6 +116,7 @@ impl TypeInfer<'_> {
             },
             (&Type::Unit, &Type::Unit) => Some(Type::Unit),
             (&Type::Int, &Type::Int) => Some(Type::Int),
+            (&Type::Float, &Type::Float) => Some(Type::Float),
             (&Type::Bool, &Type::Bool) => Some(Type::Bool),
             (&Type::Str, &Type::Str) => Some(Type::Str),
             (&Type::Char, &Type::Char) => Some(Type::Char),
@@ -206,6 +207,9 @@ impl Visitor for TypeInfer<'_> {
                     BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem if lhs_ty == Type::Int && rhs_ty == Type::Int => {
                         Type::Int
                     },
+                    BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem if lhs_ty == Type::Float && rhs_ty == Type::Float => {
+                        Type::Float
+                    },
                     BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem if lhs_ty == Type::Str && rhs_ty == Type::Str => {
                         Type::Str
                     },
@@ -295,7 +299,8 @@ impl Visitor for TypeInfer<'_> {
                 }
             },
             Expr::NoneLiteral { range: _ } => self.db.resolve_ctx.new_ty_var().wrap_in_option(),
-            Expr::NumberLiteral { n: _, range: _ } => Type::Int,
+            Expr::IntLiteral { n: _, range: _ } => Type::Int,
+            Expr::FloatLiteral { n: _, range: _ } => Type::Float,
             Expr::BoolLiteral { val: _, range: _ } => Type::Bool,
             Expr::StringLiteral { val: _, range: _ } => Type::Str,
             Expr::ArrayLiteral { len, initial, range } => {

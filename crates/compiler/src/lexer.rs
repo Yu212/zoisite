@@ -63,6 +63,7 @@ impl<'a> Lexer<'a> {
             Some('/') if self.s.peek() == Some('/') => self.line_comment(),
             Some('"') => self.string_literal(),
             Some(',') => SyntaxKind::Comma,
+            Some('.') => SyntaxKind::Dot,
             Some(':') => SyntaxKind::Colon,
             Some(';') => SyntaxKind::Semicolon,
             Some('?') => SyntaxKind::Question,

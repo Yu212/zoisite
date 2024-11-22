@@ -9,7 +9,7 @@ expression: "parse(\"{1} + {2};\")"
           BlockExpr@0..4
             OpenBrace@0..1 "{"
             ExprStmt@1..2
-              NumberLiteral@1..2
+              IntLiteral@1..2
                 Number@1..2 "1"
             CloseBrace@2..3 "}"
             Whitespace@3..4 " "
@@ -18,7 +18,7 @@ expression: "parse(\"{1} + {2};\")"
           BlockExpr@6..9
             OpenBrace@6..7 "{"
             ExprStmt@7..8
-              NumberLiteral@7..8
+              IntLiteral@7..8
                 Number@7..8 "2"
             CloseBrace@8..9 "}"
       Semicolon@9..10 ";"

@@ -319,7 +319,11 @@ pub fn number_literal(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::Number));
     let m = p.start();
     p.bump();
-    m.complete(p, SyntaxKind::NumberLiteral)
+    if p.eat(SyntaxKind::Dot) {
+        m.complete(p, SyntaxKind::FloatLiteral)
+    } else {
+        m.complete(p, SyntaxKind::IntLiteral)
+    }
 }
 
 pub fn string_literal(p: &mut Parser<'_>) -> CompletedMarker {

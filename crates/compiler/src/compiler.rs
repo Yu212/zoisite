@@ -71,6 +71,7 @@ impl<'ctx> Compiler<'ctx> {
 
     pub fn add_builtins(&mut self) -> Result<(), CompileError> {
         let i64_type = self.context.i64_type();
+        let f64_type = self.context.f64_type();
         let i8_type = self.context.i8_type();
         let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
         let void_type = self.context.void_type();
@@ -93,7 +94,19 @@ impl<'ctx> Compiler<'ctx> {
             self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), param.into()], "")?;
             self.builder.build_return(Some(&i8_type.const_int(0, false)))?;
             let print_fn_info = self.db.resolve_ctx.get_fn(FnId(0));
-            self.functions.insert((FnId(0), print_fn_info.ty.clone()), print_fn);
+            self.functions.insert((print_fn_info.id, print_fn_info.ty.clone()), print_fn);
+        }
+        {
+            let print_type = i8_type.fn_type(&[f64_type.into()], false);
+            let print_fn = self.module.add_function("printFloat", print_type, None);
+            let basic_block = self.context.append_basic_block(print_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let format_str = self.builder.build_global_string_ptr("%.10lf\n", "printf_float_format")?;
+            let param = print_fn.get_first_param().unwrap();
+            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), param.into()], "")?;
+            self.builder.build_return(Some(&i8_type.const_int(0, false)))?;
+            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(1));
+            self.functions.insert((print_fn_info.id, print_fn_info.ty.clone()), print_fn);
         }
         {
             let print_type = i8_type.fn_type(&[str_type.into()], false);
@@ -110,8 +123,8 @@ impl<'ctx> Compiler<'ctx> {
 
             self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), ptr.into()], "")?;
             self.builder.build_return(Some(&i8_type.const_int(0, false)))?;
-            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(1));
-            self.functions.insert((FnId(1), print_fn_info.ty.clone()), print_fn);
+            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(2));
+            self.functions.insert((print_fn_info.id, print_fn_info.ty.clone()), print_fn);
         }
         {
             let input_type = i64_type.fn_type(&[], false);
@@ -124,8 +137,8 @@ impl<'ctx> Compiler<'ctx> {
             let val = self.builder.build_load(i64_type, scanf_ptr, "tmp")?;
             self.builder.build_return(Some(&val))?;
 
-            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(2));
-            self.functions.insert((FnId(2), input_fn_info.ty.clone()), input_fn);
+            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(3));
+            self.functions.insert((input_fn_info.id, input_fn_info.ty.clone()), input_fn);
         }
         {
             let input_type = str_type.fn_type(&[i64_type.into()], false);
@@ -142,8 +155,8 @@ impl<'ctx> Compiler<'ctx> {
             let result = self.build_str_struct(len.into_int_value(), scanf_ptr)?;
 
             self.builder.build_return(Some(&result))?;
-            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(3));
-            self.functions.insert((FnId(3), input_fn_info.ty.clone()), input_fn);
+            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(4));
+            self.functions.insert((input_fn_info.id, input_fn_info.ty.clone()), input_fn);
         }
         {
             let chr_type = i8_type.fn_type(&[i64_type.into()], false);
@@ -153,8 +166,8 @@ impl<'ctx> Compiler<'ctx> {
             let param = chr_fn.get_first_param().unwrap().into_int_value();
             let ret_val = self.builder.build_int_truncate(param, i8_type, "tmp")?;
             self.builder.build_return(Some(&ret_val))?;
-            let chr_fn_info = self.db.resolve_ctx.get_fn(FnId(4));
-            self.functions.insert((FnId(4), chr_fn_info.ty.clone()), chr_fn);
+            let chr_fn_info = self.db.resolve_ctx.get_fn(FnId(5));
+            self.functions.insert((chr_fn_info.id, chr_fn_info.ty.clone()), chr_fn);
         }
         {
             let ord_type = i64_type.fn_type(&[i8_type.into()], false);
@@ -164,8 +177,8 @@ impl<'ctx> Compiler<'ctx> {
             let param = ord_fn.get_first_param().unwrap().into_int_value();
             let ret_val = self.builder.build_int_z_extend(param, i64_type, "tmp")?;
             self.builder.build_return(Some(&ret_val))?;
-            let ord_fn_info = self.db.resolve_ctx.get_fn(FnId(5));
-            self.functions.insert((FnId(5), ord_fn_info.ty.clone()), ord_fn);
+            let ord_fn_info = self.db.resolve_ctx.get_fn(FnId(6));
+            self.functions.insert((ord_fn_info.id, ord_fn_info.ty.clone()), ord_fn);
         }
         {
             let str_type = str_type.fn_type(&[i64_type.into()], false);
@@ -182,14 +195,27 @@ impl<'ctx> Compiler<'ctx> {
             let result = self.build_str_struct(len.into_int_value(), sprintf_ptr)?;
 
             self.builder.build_return(Some(&result))?;
-            let str_fn_info = self.db.resolve_ctx.get_fn(FnId(6));
-            self.functions.insert((FnId(6), str_fn_info.ty.clone()), str_fn);
+            let str_fn_info = self.db.resolve_ctx.get_fn(FnId(7));
+            self.functions.insert((str_fn_info.id, str_fn_info.ty.clone()), str_fn);
         }
         {
-            let some_fn_info = self.db.resolve_ctx.get_fn(FnId(7));
+            let float_type = f64_type.fn_type(&[i64_type.into()], false);
+            let float_fn = self.module.add_function("float", float_type, None);
+            let basic_block = self.context.append_basic_block(float_fn, "entry");
+            self.builder.position_at_end(basic_block);
+            let param = float_fn.get_first_param().unwrap();
+            
+            let result = self.builder.build_signed_int_to_float(param.into_int_value(), f64_type, "float")?;
+
+            self.builder.build_return(Some(&result))?;
+            let float_fn_info = self.db.resolve_ctx.get_fn(FnId(8));
+            self.functions.insert((float_fn_info.id, float_fn_info.ty.clone()), float_fn);
+        }
+        {
+            let some_fn_info = self.db.resolve_ctx.get_fn(FnId(9));
             for instance in &some_fn_info.instances {
                 let some_fn = self.build_some_fn(&instance)?;
-                self.functions.insert((FnId(7), instance.clone()), some_fn);
+                self.functions.insert((some_fn_info.id, instance.clone()), some_fn);
             }
         }
         Ok(())
@@ -215,6 +241,7 @@ impl<'ctx> Compiler<'ctx> {
             Type::TyVar(_) => Err(self.compiler_error("Type variable cannot convert to LLVM type")),
             Type::Unit => Ok(self.context.i8_type().into()),
             Type::Int => Ok(self.context.i64_type().into()),
+            Type::Float => Ok(self.context.f64_type().into()),
             Type::Bool => Ok(self.context.bool_type().into()),
             Type::Str => Ok(self.context.struct_type(&[self.context.i64_type().into(), self.context.i8_type().ptr_type(AddressSpace::default()).into()], false).into()),
             Type::Char => Ok(self.context.i8_type().into()),
@@ -396,6 +423,19 @@ impl<'ctx> Compiler<'ctx> {
                         };
                         Ok(int_ret?.into())
                     },
+                    (_, Type::Float, Type::Float) => {
+                        let lhs_value = self.compile_expr_idx(lhs)?.into_float_value();
+                        let rhs_value = self.compile_expr_idx(rhs)?.into_float_value();
+                        let float_ret = match op {
+                            BinaryOp::Add => self.builder.build_float_add(lhs_value, rhs_value, "add"),
+                            BinaryOp::Sub => self.builder.build_float_sub(lhs_value, rhs_value, "sub"),
+                            BinaryOp::Mul => self.builder.build_float_mul(lhs_value, rhs_value, "mul"),
+                            BinaryOp::Div => self.builder.build_float_div(lhs_value, rhs_value, "div"),
+                            BinaryOp::Rem => self.builder.build_float_rem(lhs_value, rhs_value, "rem"),
+                            _ => unreachable!(),
+                        };
+                        Ok(float_ret?.into())
+                    },
                     (_, Type::Bool, Type::Bool) => {
                         let lhs_value = self.compile_expr_idx(lhs)?.into_int_value();
                         let rhs_value = self.compile_expr_idx(rhs)?.into_int_value();
@@ -507,10 +547,15 @@ impl<'ctx> Compiler<'ctx> {
                 let ty = self.compile_ty(&self.type_inferred.expr_ty(idx))?.into_pointer_type();
                 Ok(ty.const_null().into())
             },
-            Expr::NumberLiteral { n, range: _ } => {
+            Expr::IntLiteral { n, range: _ } => {
                 let i64_type = self.context.i64_type();
-                let n = n.ok_or(self.compiler_error("Number literal is missing"))?;
+                let n = n.ok_or(self.compiler_error("Int literal is missing"))?;
                 Ok(i64_type.const_int(n, false).into())
+            },
+            Expr::FloatLiteral { n, range: _ } => {
+                let f64_type = self.context.f64_type();
+                let n = n.ok_or(self.compiler_error("Float literal is missing"))?;
+                Ok(f64_type.const_float(n).into())
             },
             Expr::BoolLiteral { val, range: _ } => {
                 let bool_type = self.context.bool_type();

@@ -41,7 +41,7 @@ expression: "parse(\"let a: (int[]?, str, (char?, unit)) = 0;\")"
             Whitespace@35..36 " "
         Equals@36..37 "="
         Whitespace@37..38 " "
-        NumberLiteral@38..39
+        IntLiteral@38..39
           Number@38..39 "0"
       Semicolon@39..40 ";"
     ,
