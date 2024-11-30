@@ -571,6 +571,11 @@ impl<'ctx> Compiler<'ctx> {
                 let result = self.build_str_struct(i64_type.const_int(len, false), str_ptr)?;
                 Ok(result.into())
             },
+            Expr::CharLiteral { val, range: _ } => {
+                let i8_type = self.context.i8_type();
+                let val = val.ok_or(self.compiler_error("Char literal is missing"))?;
+                Ok(i8_type.const_int(val as u64, false).into())
+            },
             Expr::ArrayLiteral { len, initial, range: _ } => {
                 let i64_type = self.context.i64_type();
 

@@ -303,6 +303,7 @@ impl Visitor for TypeInfer<'_> {
             Expr::FloatLiteral { n: _, range: _ } => Type::Float,
             Expr::BoolLiteral { val: _, range: _ } => Type::Bool,
             Expr::StringLiteral { val: _, range: _ } => Type::Str,
+            Expr::CharLiteral { val: _, range: _ } => Type::Char,
             Expr::ArrayLiteral { len, initial, range } => {
                 let mut ty = self.inferred.expr_ty(initial);
                 for len_expr in len {

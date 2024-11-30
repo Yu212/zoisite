@@ -96,6 +96,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, node: Expr) {
         Expr::FloatLiteral { n: _, range: _ } => {}
         Expr::BoolLiteral { val: _, range: _ } => {}
         Expr::StringLiteral { val: _, range: _ } => {}
+        Expr::CharLiteral { val: _, range: _ } => {}
         Expr::ArrayLiteral { len, initial, range: _ } => {
             for len_expr in len {
                 visitor.visit_expr_idx(len_expr);

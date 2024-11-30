@@ -183,6 +183,7 @@ impl Database {
             Some(ast::Expr::FloatLiteral(ast)) => self.lower_float_literal(ast),
             Some(ast::Expr::BoolLiteral(ast)) => self.lower_bool_literal(ast),
             Some(ast::Expr::StringLiteral(ast)) => self.lower_string_literal(ast),
+            Some(ast::Expr::CharLiteral(ast)) => self.lower_char_literal(ast),
             Some(ast::Expr::ArrayLiteral(ast)) => self.lower_array_literal(ast),
             None => Expr::Missing,
         };
@@ -333,6 +334,12 @@ impl Database {
     }
     pub fn lower_string_literal(&mut self, ast: ast::StringLiteral) -> Expr {
         Expr::StringLiteral {
+            val: ast.parse(),
+            range: ast.syntax().text_range(),
+        }
+    }
+    pub fn lower_char_literal(&mut self, ast: ast::CharLiteral) -> Expr {
+        Expr::CharLiteral {
             val: ast.parse(),
             range: ast.syntax().text_range(),
         }

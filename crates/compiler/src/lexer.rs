@@ -62,6 +62,7 @@ impl<'a> Lexer<'a> {
             Some('<') => SyntaxKind::Lt,
             Some('/') if self.s.peek() == Some('/') => self.line_comment(),
             Some('"') => self.string_literal(),
+            Some('\'') => self.char_literal(),
             Some(',') => SyntaxKind::Comma,
             Some('.') => SyntaxKind::Dot,
             Some(':') => SyntaxKind::Colon,
@@ -111,6 +112,17 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn char_literal(&mut self) -> SyntaxKind {
+        let inner_literal = self.s.eat();
+        if let Some('\'') = inner_literal {
+            self.error(DiagnosticKind::EmptyCharLiteral)
+        } else if inner_literal.is_none() || !self.s.eat_if('\'') {
+            self.error(DiagnosticKind::UnterminatedCharLiteral)
+        } else {
+            SyntaxKind::Char
+        }
+    }
+
     fn ident(&mut self, start: usize) -> SyntaxKind {
         self.s.eat_while(Self::is_ident_continue);
         let ident = self.s.from(start);
@@ -141,7 +153,7 @@ mod tests {
     use crate::lexer::Lexer;
     use crate::token::Token;
 
-    fn tokenize<'a>(text: &'a str) -> (Vec<Token<'a>>, Vec<Diagnostic>) {
+    fn tokenize(text: &str) -> (Vec<Token>, Vec<Diagnostic>) {
         let lexer = Lexer::new(text);
         lexer.tokenize()
     }

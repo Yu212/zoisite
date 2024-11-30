@@ -114,6 +114,10 @@ pub enum Expr {
         val: Option<EcoString>,
         range: TextRange,
     },
+    CharLiteral {
+        val: Option<u8>,
+        range: TextRange,
+    },
     ArrayLiteral {
         len: Vec<ExprIdx>,
         initial: ExprIdx,

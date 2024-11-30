@@ -105,6 +105,7 @@ asts! {
         FloatLiteral,
         BoolLiteral,
         StringLiteral,
+        CharLiteral,
         ArrayLiteral,
     ];
     TypedIdent;
@@ -316,6 +317,14 @@ impl StringLiteral {
         let token = self.0.first_token()?;
         let text = token.text();
         Some(EcoString::from(&text[1..text.len()-1]))
+    }
+}
+
+impl CharLiteral {
+    pub fn parse(&self) -> Option<u8> {
+        let token = self.0.first_token()?;
+        let text = token.text();
+        Some(text.as_bytes()[1])
     }
 }
 

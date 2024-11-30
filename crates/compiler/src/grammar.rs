@@ -208,6 +208,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
         SyntaxKind::Number => Some((number_literal(p), false)),
         SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some((bool_literal(p), false)),
         SyntaxKind::String => Some((string_literal(p), false)),
+        SyntaxKind::Char => Some((char_literal(p), false)),
         SyntaxKind::OpenBracket => Some((array_literal(p), false)),
         SyntaxKind::Minus => Some((prefix_expr(p), false)),
         SyntaxKind::OpenParen => Some((paren_expr(p), false)),
@@ -216,7 +217,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
         SyntaxKind::Ident => Some((ref_expr(p), false)),
         SyntaxKind::IfKw => Some(if_expr(p)),
         _ => {
-            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::String, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
+            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::String, SyntaxKind::Char, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
             None
         }
     }
@@ -331,6 +332,13 @@ pub fn string_literal(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     m.complete(p, SyntaxKind::StringLiteral)
+}
+
+pub fn char_literal(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::Char));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::CharLiteral)
 }
 
 pub fn bool_literal(p: &mut Parser<'_>) -> CompletedMarker {
