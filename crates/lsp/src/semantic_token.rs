@@ -18,6 +18,7 @@ pub fn get_semantic_tokens(tokens: Vec<SyntaxToken>, rope: &Rope) -> Vec<Semanti
         let semantic_token_type = match token.kind() {
             SyntaxKind::LineComment => SemanticTokenType::COMMENT,
             SyntaxKind::String => SemanticTokenType::STRING,
+            SyntaxKind::Char => SemanticTokenType::STRING,
             SyntaxKind::LetKw => SemanticTokenType::KEYWORD,
             SyntaxKind::IfKw => SemanticTokenType::KEYWORD,
             SyntaxKind::ElseKw => SemanticTokenType::KEYWORD,
