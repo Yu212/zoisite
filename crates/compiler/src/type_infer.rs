@@ -61,9 +61,6 @@ impl TypeInfer<'_> {
         for (&var_id, ty) in self.ty_env.iter() {
             let var_info = self.db.resolve_ctx.get_var(var_id);
             let inferred = self.inferred.substitute(&ty);
-            if var_info.ty_hint.is_none() {
-                // eprintln!("{:?} {:?}", var_info.name, inferred);
-            }
             if inferred.contains_ty_var() {
                 let range = var_info.ident.clone().unwrap().range;
                 self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeInferenceFailure, range));
@@ -96,7 +93,6 @@ impl TypeInfer<'_> {
     fn unify(&mut self, ty1: &Type, ty2: &Type, range: TextRange) -> Option<Type> {
         let ty1 = self.inferred.substitute(ty1);
         let ty2 = self.inferred.substitute(ty2);
-        // eprintln!("{:?} {:?} {:?}", ty1, ty2, range);
         match (&ty1, &ty2) {
             (_, &Type::Invalid) => Some(ty1),
             (&Type::Invalid, _) => Some(ty2),
@@ -214,6 +210,9 @@ impl Visitor for TypeInfer<'_> {
                         Type::Str
                     },
                     BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt if lhs_ty == Type::Int && rhs_ty == Type::Int => {
+                        Type::Bool
+                    },
+                    BinaryOp::EqEq | BinaryOp::Neq | BinaryOp::Ge | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Lt if lhs_ty == Type::Char && rhs_ty == Type::Char => {
                         Type::Bool
                     },
                     BinaryOp::And | BinaryOp::Or if lhs_ty == Type::Bool && rhs_ty == Type::Bool => {

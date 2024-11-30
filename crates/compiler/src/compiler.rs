@@ -423,6 +423,20 @@ impl<'ctx> Compiler<'ctx> {
                         };
                         Ok(int_ret?.into())
                     },
+                    (_, Type::Char, Type::Char) => {
+                        let lhs_value = self.compile_expr_idx(lhs)?.into_int_value();
+                        let rhs_value = self.compile_expr_idx(rhs)?.into_int_value();
+                        let int_ret = match op {
+                            BinaryOp::EqEq => self.builder.build_int_compare(IntPredicate::EQ, lhs_value, rhs_value, "eq"),
+                            BinaryOp::Neq => self.builder.build_int_compare(IntPredicate::NE, lhs_value, rhs_value, "ne"),
+                            BinaryOp::Ge => self.builder.build_int_compare(IntPredicate::SGE, lhs_value, rhs_value, "ge"),
+                            BinaryOp::Le => self.builder.build_int_compare(IntPredicate::SLE, lhs_value, rhs_value, "le"),
+                            BinaryOp::Gt => self.builder.build_int_compare(IntPredicate::SGT, lhs_value, rhs_value, "gt"),
+                            BinaryOp::Lt => self.builder.build_int_compare(IntPredicate::SLT, lhs_value, rhs_value, "lt"),
+                            _ => unreachable!(),
+                        };
+                        Ok(int_ret?.into())
+                    },
                     (_, Type::Float, Type::Float) => {
                         let lhs_value = self.compile_expr_idx(lhs)?.into_float_value();
                         let rhs_value = self.compile_expr_idx(rhs)?.into_float_value();
