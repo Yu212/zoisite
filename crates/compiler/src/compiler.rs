@@ -12,6 +12,8 @@ use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, Int
 use inkwell::{AddressSpace, IntPredicate};
 use std::collections::HashMap;
 
+type CompileResult<T> = Result<T, CompileError>;
+
 pub struct Compiler<'ctx> {
     pub db: &'ctx Database,
     pub context: &'ctx Context,
@@ -45,7 +47,7 @@ impl<'ctx> Compiler<'ctx> {
         CompileError::CompilerError(msg.to_owned())
     }
 
-    pub fn compile(mut self, root: &Root) -> Result<Module<'ctx>, CompileError> {
+    pub fn compile(mut self, root: &Root) -> CompileResult<Module<'ctx>> {
         self.add_builtins()?;
         let funcs: Vec<_> = self.db.funcs.values().cloned().collect();
         for func in funcs {
@@ -62,14 +64,14 @@ impl<'ctx> Compiler<'ctx> {
         Ok(self.module)
     }
 
-    fn compile_root(&mut self, root: &Root) -> Result<(), CompileError> {
+    fn compile_root(&mut self, root: &Root) -> CompileResult<()> {
         for &stmt in &root.stmts {
             self.compile_stmt(self.db.stmts[stmt].clone())?;
         }
         Ok(())
     }
 
-    pub fn add_builtins(&mut self) -> Result<(), CompileError> {
+    pub fn add_builtins(&mut self) -> CompileResult<()> {
         let i64_type = self.context.i64_type();
         let f64_type = self.context.f64_type();
         let i8_type = self.context.i8_type();
@@ -221,7 +223,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(())
     }
 
-    pub fn build_some_fn(&mut self, func_ty: &FuncType) -> Result<FunctionValue<'ctx>, CompileError> {
+    pub fn build_some_fn(&mut self, func_ty: &FuncType) -> CompileResult<FunctionValue<'ctx>> {
         let ty = func_ty.params_ty.first().unwrap();
         let llvm_ty = self.compile_ty(ty)?;
         let some_type = llvm_ty.ptr_type(AddressSpace::default()).fn_type(&[llvm_ty.clone().into()], false);
@@ -236,7 +238,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(some_fn)
     }
 
-    fn compile_ty(&self, ty: &Type) -> Result<BasicTypeEnum<'ctx>, CompileError> {
+    fn compile_ty(&self, ty: &Type) -> CompileResult<BasicTypeEnum<'ctx>> {
         match ty {
             Type::TyVar(_) => Err(self.compiler_error("Type variable cannot convert to LLVM type")),
             Type::Unit => Ok(self.context.i8_type().into()),
@@ -255,7 +257,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_stmt(&mut self, stmt: Stmt) -> Result<BasicValueEnum<'ctx>, CompileError> {
+    fn compile_stmt(&mut self, stmt: Stmt) -> CompileResult<BasicValueEnum<'ctx>> {
         match stmt {
             Stmt::EmptyStmt { range: _ } => {
                 let i8_type = self.context.i8_type();
@@ -322,7 +324,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_func(&mut self, func: Func) -> Result<(), CompileError> {
+    fn compile_func(&mut self, func: Func) -> CompileResult<()> {
         if let Some(fn_info) = func.fn_info {
             let params_type = fn_info.ty.params_ty.iter().map(|ty| self.compile_ty(ty).map(|ty| ty.into())).collect::<Result<Vec<_>, _>>()?;
             let return_ty = self.compile_ty(&fn_info.ty.return_ty)?;
@@ -344,7 +346,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(())
     }
 
-    fn compile_lvalue(&mut self, expr: Expr) -> Result<PointerValue<'ctx>, CompileError> {
+    fn compile_lvalue(&mut self, expr: Expr) -> CompileResult<PointerValue<'ctx>> {
         match expr {
             Expr::Ref { var_id, range: _ } => {
                 let var_id = var_id.ok_or(self.compiler_error("var"))?;
@@ -381,11 +383,11 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_expr_idx(&mut self, idx: ExprIdx) -> Result<BasicValueEnum<'ctx>, CompileError> {
+    fn compile_expr_idx(&mut self, idx: ExprIdx) -> CompileResult<BasicValueEnum<'ctx>> {
         self.compile_expr(idx, self.db.exprs[idx].clone())
     }
 
-    fn compile_expr(&mut self, idx: ExprIdx, expr: Expr) -> Result<BasicValueEnum<'ctx>, CompileError> {
+    fn compile_expr(&mut self, idx: ExprIdx, expr: Expr) -> CompileResult<BasicValueEnum<'ctx>> {
         match expr {
             Expr::Missing => Err(self.compiler_error("Expr is missing")),
             Expr::Binary { op, lhs, rhs, range: _ } => {
@@ -637,7 +639,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> Result<PointerValue<'ctx>, CompileError> {
+    fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
         if i + 1 == len_vals.len() {
             unsafe {
                 let ptr = self.builder.build_in_bounds_gep(arr_types[i + 1], all_array, &[all_idx_val], "tmp")?;
@@ -676,7 +678,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(array)
     }
 
-    fn build_str_struct(&mut self, len: IntValue<'ctx>, ptr: PointerValue<'ctx>) -> Result<StructValue<'ctx>, CompileError> {
+    fn build_str_struct(&mut self, len: IntValue<'ctx>, ptr: PointerValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
         let i64_type = self.context.i64_type();
         let i8_type = self.context.i8_type();
         let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
@@ -685,7 +687,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(self.builder.build_insert_value(result, ptr, 1, "res")?.into_struct_value())
     }
 
-    fn build_str_concat(&mut self, lhs: StructValue<'ctx>, rhs: StructValue<'ctx>) -> Result<StructValue<'ctx>, CompileError> {
+    fn build_str_concat(&mut self, lhs: StructValue<'ctx>, rhs: StructValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
         let i64_type = self.context.i64_type();
         let i8_type = self.context.i8_type();
         let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
