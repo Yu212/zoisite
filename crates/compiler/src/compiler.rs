@@ -187,9 +187,9 @@ impl<'ctx> Compiler<'ctx> {
             let str_fn = self.module.add_function("str", str_type, None);
             let basic_block = self.context.append_basic_block(str_fn, "entry");
             self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%d", "sprintf_str_format")?;
+            let format_str = self.builder.build_global_string_ptr("%lld", "sprintf_str_format")?;
             let param = str_fn.get_first_param().unwrap();
-            let sprintf_ptr = self.builder.build_array_malloc(i8_type, i64_type.const_int(20, false), "str")?;
+            let sprintf_ptr = self.builder.build_array_malloc(i8_type, i64_type.const_int(21, false), "str")?;
             self.builder.build_call(sprintf_function, &[sprintf_ptr.into(), format_str.as_pointer_value().into(), param.into()], "")?;
 
             let call_site = self.builder.build_call(strlen_function, &[sprintf_ptr.into()], "")?;
