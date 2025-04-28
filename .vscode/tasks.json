@@ -53,7 +53,7 @@
             "type": "shell",
             "command": "cp",
             "args": [
-                "${workspaceFolder}/target/debug/main",
+                "${workspaceFolder}/target/debug/zoic",
                 "${workspaceFolder}/files/zoic"
             ],
             "problemMatcher": [],

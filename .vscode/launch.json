@@ -14,7 +14,7 @@
 			},
 			"program": "${cargo:program}",
 			"args": [
-				"main.zoi"
+				"-O", "main.zoi"
 			],
 			"cwd": "${workspaceFolder}/files",
 			"sourceLanguages": [

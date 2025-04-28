@@ -1,11 +1,3 @@
-use std::fs;
-use std::fs::File;
-use std::io::Write;
-use std::ops::Index;
-use std::path::PathBuf;
-use std::process::Command;
-use std::time::Instant;
-
 use crate::ast::Root;
 use crate::compiler::Compiler;
 use crate::database::Database;
@@ -19,8 +11,15 @@ use inkwell::module::Module;
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::targets::{InitializationConfig, Target};
 use inkwell::OptimizationLevel;
+use language::SyntaxNode;
 use rowan::ast::AstNode;
 use rowan::NodeOrToken;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::ops::Index;
+use std::process::{Command, Stdio};
+use std::time::Instant;
 
 pub mod parser;
 pub mod grammar;
@@ -89,7 +88,23 @@ pub fn compile_no_output(text: &str) {
     }
 }
 
-pub fn compile(text: &str) {
+pub fn parse_syntax(text: &str) -> SyntaxNode {
+    let lexer = Lexer::new(text);
+    let (tokens, lexer_errors) = lexer.tokenize();
+    let parser = Parser::new(tokens);
+    let (syntax, parser_errors) = parser.parse();
+    eprintln!("lexer errors: ");
+    for err in &lexer_errors {
+        eprintln!("{:?} {:?}", err, text.index(err.range));
+    }
+    eprintln!("parser errors: ");
+    for err in &parser_errors {
+        eprintln!("{:?} {:?}", err, text.index(err.range));
+    }
+    syntax
+}
+
+pub fn compile(text: &str, opt: bool) -> Result<String, ()> {
     let start = Instant::now();
     let lexer = Lexer::new(text);
     let (tokens, lexer_errors) = lexer.tokenize();
@@ -103,8 +118,6 @@ pub fn compile(text: &str) {
     for err in &parser_errors {
         eprintln!("{:?} {:?}", err, text.index(err.range));
     }
-    let mut syntax_file = File::create("output.syntax").unwrap();
-    syntax_file.write_all(format!("{:#?}", syntax).as_bytes()).unwrap();
     let root = Root::cast(syntax).unwrap();
     let mut db = Database::new();
     let (hir, lower_errors) = db.lower_root(root);
@@ -113,7 +126,7 @@ pub fn compile(text: &str) {
         eprintln!("{:?} {:?}", err, text.index(err.range));
     }
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
-        return;
+        return Err(());
     }
     let type_infer = TypeInfer::new(&mut db);
     let (type_inferred, type_check_errors) = type_infer.infer(hir.clone());
@@ -122,41 +135,38 @@ pub fn compile(text: &str) {
         eprintln!("{:?} {:?}", err, text.index(err.range));
     }
     if !type_check_errors.is_empty() {
-        return;
+        return Err(());
     }
     let context = Context::create();
     let compiler = Compiler::new(&context, &db, type_inferred, "main");
     let module = compiler.compile(&hir).expect("An error occurred during compilation");
     println!("compile: {} ms", start.elapsed().as_millis());
-    module.print_to_file(PathBuf::from("output.ll")).expect("print_to_file failed");
-    optimize(&module);
-    println!("optimize: {} ms", start.elapsed().as_millis());
-    module.print_to_file(PathBuf::from("output_optimized.ll")).expect("print_to_file failed");
-    generate_submission_file(text, &module);
-    run_llvm_ir();
+    if opt {
+        optimize(&module);
+        println!("optimize: {} ms", start.elapsed().as_millis());
+    }
+    Ok(module.to_string())
 }
 
-pub fn generate_submission_file(text: &str, module: &Module) {
+pub fn generate_submission_file(code: &String, ir_code: &String) {
     let template = fs::read_to_string("submission_template.ll").unwrap();
     let mut submission_file = File::create("submission.ll").unwrap();
-    let commented_out = text.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
-    submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", &module.to_string()).as_bytes()).unwrap();
+    let commented_out = code.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
+    submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", ir_code).as_bytes()).unwrap();
 }
 
-pub fn run_llvm_ir() {
-    Command::new("/usr/lib/llvm-16/bin/clang")
-        .current_dir(PathBuf::from("."))
-        .args(vec!["-O2", "-o", "a.out", "output_optimized.ll"])
+pub fn compile_to_executable(ir_code: &str) {
+    let mut clang = Command::new("/usr/lib/llvm-16/bin/clang")
+        .arg("-x")
+        .arg("ir")
+        .arg("-O2")
+        .arg("-")
+        .stdin(Stdio::piped())
         .spawn()
-        .unwrap()
-        .wait()
         .unwrap();
-    Command::new("./a.out")
-        .stdin(File::open("input.txt").unwrap())
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
+    let stdin = clang.stdin.as_mut().unwrap();
+    stdin.write_all(ir_code.as_bytes()).unwrap();
+    clang.wait().unwrap();
 }
 
 pub fn optimize(module: &Module) {

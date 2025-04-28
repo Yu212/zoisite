@@ -1,18 +1,49 @@
 use clap::Parser;
-use std::fs::File;
-use std::io::Read;
-use zoisite::compile;
+use std::fs;
+use zoisite::*;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
+#[clap(author, version, about)]
 struct Args {
-    #[arg()]
-    file: String,
+    input: String,
+
+    #[clap(long, default_value = "ll,submission,executable")]
+    emit: String,
+
+    #[clap(short = 'O', long = "optimize")]
+    optimize: bool,
 }
 
 fn main() {
     let args = Args::parse();
-    let mut file = File::open(args.file).expect("file not found");
-    let mut buffer = String::new();
-    file.read_to_string(&mut buffer).expect("failed to read file");
-    compile(buffer.as_str());
+    let options: Vec<&str> = args.emit.split(',')
+        .map(|s| s.trim())
+        .collect();
+
+    let source = fs::read_to_string(&args.input).expect("Failed to read source file");
+    
+    if options.contains(&"syntax") {
+        let syntax = parse_syntax(&source);
+        let output_syntax = format!("{}.ll", args.input);
+        fs::write(&output_syntax, format!("{:#?}", syntax).as_bytes()).expect("Failed to write syntax file");
+        println!("Syntax tree written to {}", output_syntax);
+    }
+
+    let ir_code = compile(&source, args.optimize).expect("Compilation failed");
+
+    if options.contains(&"ll") {
+        let output_ll = format!("{}.ll", args.input);
+        fs::write(&output_ll, &ir_code).expect("Failed to write ll file");
+        println!("LLVM IR written to {}", output_ll);
+    }
+
+    if options.contains(&"submission") {
+        generate_submission_file(&source, &ir_code);
+        println!("Submission file written");
+    }
+
+    if options.contains(&"executable") {
+        compile_to_executable(&ir_code);
+        println!("Executable compiled");
+    }
 }
