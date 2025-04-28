@@ -3,3 +3,21 @@
 ---
 
 Zoisite is a programming language designed exclusively for competitive programming.
+
+## Installation
+
+### Compiler
+
+To install the Zoisite compiler:
+
+```bash
+cargo install --path crates/compiler
+```
+
+### VS Code Extension
+
+To build the VS Code extension:
+
+```bash
+cd vscode && npm run compile
+```
