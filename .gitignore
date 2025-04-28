@@ -4,3 +4,4 @@
 /.devcontainer
 node_modules/
 out/
+.clinerules
