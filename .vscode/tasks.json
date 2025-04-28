@@ -22,7 +22,7 @@
             "command": "build",
             "args": [
                 "--package=zoisite",
-                "--bin=main"
+                "--bin=zoic"
             ],
             "problemMatcher": [
                 "$rustc"
