@@ -1,0 +1,97 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Fuzzer",
+            "type": "cargo",
+            "command": "fuzz",
+            "args": [
+                "run",
+                "main",
+                "--",
+                "-max_total_time=30"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "test"
+        },
+        {
+            "label": "Build Compiler",
+            "type": "cargo",
+            "command": "build",
+            "args": [
+                "--package=zoisite",
+                "--bin=main"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Build LSP",
+            "type": "cargo",
+            "command": "build",
+            "args": [
+                "--package=zoisite-lsp",
+                "--bin=zoisite-lsp"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Copy Compiler",
+            "type": "shell",
+            "command": "cp",
+            "args": [
+                "${workspaceFolder}/target/debug/main",
+                "${workspaceFolder}/files/zoic"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Prepare Dev",
+            "dependsOn": [
+                "Build Compiler",
+                "Build LSP",
+                "Copy Compiler",
+                "npm: watch",
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "type": "npm",
+            "script": "watch",
+            "problemMatcher": "$tsc-watch",
+            "isBackground": true,
+            "presentation": {
+                "reveal": "never",
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/vscode"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

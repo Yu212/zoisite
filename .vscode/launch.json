@@ -1,0 +1,62 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Debug Compiler",
+			"type": "lldb",
+			"request": "launch",
+			"cargo": {
+				"args": [
+					"build",
+					"--package=zoisite",
+					"--bin=main"
+				]
+			},
+			"program": "${cargo:program}",
+			"args": [
+				"main.zoi"
+			],
+			"cwd": "${workspaceFolder}/files",
+			"sourceLanguages": [
+				"rust"
+			]
+		},
+		{
+			"name": "Debug Tests",
+			"type": "lldb",
+			"request": "launch",
+			"cargo": {
+				"args": [
+					"test",
+					"--lib",
+					"--package=zoisite",
+					"--no-run"
+				],
+				"filter": {
+					"name": "zoisite",
+					"kind": "lib"
+				}
+			},
+			"program": "${cargo:program}",
+			"cwd": "${workspaceFolder}",
+			"sourceLanguages": [
+				"rust"
+			]
+		},
+		{
+			"name": "Run Dev",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"${workspaceFolder}/files"
+			],
+			"outFiles": [
+				"${workspaceFolder}/vscode/out/**/*.js"
+			],
+			"preLaunchTask": "Prepare Dev",
+			"cwd": "${workspaceFolder}/vscode"
+		}
+	]
+}
