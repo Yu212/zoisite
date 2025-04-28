@@ -1,22 +1,15 @@
 import * as path from "path";
-import {ExtensionContext, workspace} from "vscode";
-import {Executable, LanguageClient, LanguageClientOptions, ServerOptions} from "vscode-languageclient/node";
+import { ExtensionContext, workspace } from "vscode";
+import {LanguageClient, LanguageClientOptions, ServerOptions} from "vscode-languageclient/node";
 
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-    const run: Executable = {
-        command: context.asAbsolutePath(path.join("..", "target", "debug", "zoisite-lsp")),
-        options: {
-            env: {
-                ...process.env,
-                RUST_LOG: "DEBUG",
-            }
-        }
-    }
+    const serverModule = context.asAbsolutePath(path.join("server", "zoisite-lsp"));
+
     const serverOptions: ServerOptions = {
-        run,
-        debug: run,
+        run: { command: serverModule },
+        debug: { command: serverModule },
     };
     const clientOptions: LanguageClientOptions = {
         documentSelector: [

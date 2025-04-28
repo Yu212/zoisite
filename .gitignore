@@ -5,3 +5,6 @@
 node_modules/
 out/
 .clinerules
+/vscode/tsconfig.tsbuildinfo
+/vscode/server/zoisite-lsp
+/vscode/*.vsix
