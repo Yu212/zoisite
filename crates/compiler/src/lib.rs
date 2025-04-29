@@ -14,7 +14,6 @@ use inkwell::OptimizationLevel;
 use language::SyntaxNode;
 use rowan::ast::AstNode;
 use rowan::NodeOrToken;
-use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::ops::Index;
@@ -149,14 +148,25 @@ pub fn compile(text: &str, opt: bool) -> Result<String, ()> {
 }
 
 pub fn generate_submission_file(code: &String, ir_code: &String) {
-    let template = fs::read_to_string("submission_template.ll").unwrap();
     let mut submission_file = File::create("submission.ll").unwrap();
     let commented_out = code.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
-    submission_file.write_all(template.replace("{code}", &commented_out).replace("{ir}", ir_code).as_bytes()).unwrap();
+    let version = env!("CARGO_PKG_VERSION");
+    let submission_str = format!("\
+; compiled from Zoisite v{version}
+; https://github.com/Yu212/zoisite
+
+; original code:
+
+{commented_out}
+
+
+
+${ir_code}");
+    submission_file.write_all(submission_str.as_bytes()).unwrap();
 }
 
 pub fn compile_to_executable(ir_code: &str) {
-    let mut clang = Command::new("/usr/lib/llvm-16/bin/clang")
+    let mut clang = Command::new("clang")
         .arg("-x")
         .arg("ir")
         .arg("-O2")
