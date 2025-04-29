@@ -1,6 +1,14 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::fs;
 use zoisite::*;
+
+#[derive(Debug, Clone, ValueEnum, PartialEq)]
+enum EmitFormat {
+    Ir,
+    Submission,
+    Executable,
+    Syntax,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "Zoisite")]
@@ -8,8 +16,13 @@ use zoisite::*;
 struct Args {
     input: String,
 
-    #[clap(long, default_value = "ll,submission,executable")]
-    emit: String,
+    #[clap(
+        long,
+        value_enum,
+        value_delimiter = ',',
+        default_values_t = [EmitFormat::Ir, EmitFormat::Submission, EmitFormat::Executable],
+    )]
+    emit: Vec<EmitFormat>,
 
     #[clap(short = 'O', long = "optimize")]
     optimize: bool,
@@ -17,13 +30,10 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let options: Vec<&str> = args.emit.split(',')
-        .map(|s| s.trim())
-        .collect();
 
     let source = fs::read_to_string(&args.input).expect("Failed to read source file");
     
-    if options.contains(&"syntax") {
+    if args.emit.contains(&EmitFormat::Syntax) {
         let syntax = parse_syntax(&source);
         let output_syntax = format!("{}.ll", args.input);
         fs::write(&output_syntax, format!("{:#?}", syntax).as_bytes()).expect("Failed to write syntax file");
@@ -32,18 +42,18 @@ fn main() {
 
     let ir_code = compile(&source, args.optimize).expect("Compilation failed");
 
-    if options.contains(&"ll") {
+    if args.emit.contains(&EmitFormat::Ir) {
         let output_ll = format!("{}.ll", args.input);
         fs::write(&output_ll, &ir_code).expect("Failed to write ll file");
         println!("LLVM IR written to {}", output_ll);
     }
 
-    if options.contains(&"submission") {
+    if args.emit.contains(&EmitFormat::Submission) {
         generate_submission_file(&source, &ir_code);
         println!("Submission file written");
     }
 
-    if options.contains(&"executable") {
+    if args.emit.contains(&EmitFormat::Executable) {
         compile_to_executable(&ir_code);
         println!("Executable compiled");
     }
