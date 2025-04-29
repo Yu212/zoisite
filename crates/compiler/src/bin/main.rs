@@ -1,13 +1,14 @@
 use clap::{Parser, ValueEnum};
-use std::fs;
-use zoisite::*;
+use std::process::exit;
+use std::{fs, path::Path};
+use zoisite::{run_lifecycle, LifecycleOptions};
 
 #[derive(Debug, Clone, ValueEnum, PartialEq)]
 enum EmitFormat {
+    Syntax,
     Ir,
     Submission,
     Executable,
-    Syntax,
 }
 
 #[derive(Parser, Debug)]
@@ -26,35 +27,36 @@ struct Args {
 
     #[clap(short = 'O', long = "optimize")]
     optimize: bool,
+
+    #[clap(short = 'd', long = "debug")]
+    debug: bool,
 }
 
 fn main() {
     let args = Args::parse();
 
-    let source = fs::read_to_string(&args.input).expect("Failed to read source file");
-    
-    if args.emit.contains(&EmitFormat::Syntax) {
-        let syntax = parse_syntax(&source);
-        let output_syntax = format!("{}.ll", args.input);
-        fs::write(&output_syntax, format!("{:#?}", syntax).as_bytes()).expect("Failed to write syntax file");
-        println!("Syntax tree written to {}", output_syntax);
-    }
+    let base_name = Path::new(&args.input)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output")
+        .to_string();
 
-    let ir_code = compile(&source, args.optimize).expect("Compilation failed");
+    let source = fs::read_to_string(&args.input)
+        .expect("Failed to read source file");
 
-    if args.emit.contains(&EmitFormat::Ir) {
-        let output_ll = format!("{}.ll", args.input);
-        fs::write(&output_ll, &ir_code).expect("Failed to write ll file");
-        println!("LLVM IR written to {}", output_ll);
-    }
+    let opts = LifecycleOptions {
+        base_name,
+        debug: args.debug,
+        optimize: args.optimize,
+        run_jit: false,
+        output_syntax: args.emit.contains(&EmitFormat::Syntax),
+        output_ir: args.emit.contains(&EmitFormat::Ir),
+        output_submission: args.emit.contains(&EmitFormat::Submission),
+        output_executable: args.emit.contains(&EmitFormat::Executable),
+    };
 
-    if args.emit.contains(&EmitFormat::Submission) {
-        generate_submission_file(&source, &ir_code);
-        println!("Submission file written");
-    }
-
-    if args.emit.contains(&EmitFormat::Executable) {
-        compile_to_executable(&ir_code);
-        println!("Executable compiled");
+    if !run_lifecycle(&source, opts) {
+        eprintln!("Compilation failed");
+        exit(1);
     }
 }
