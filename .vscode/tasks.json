@@ -49,13 +49,14 @@
             }
         },
         {
-            "label": "Copy Compiler",
+            "label": "Build and Copy Compiler",
             "type": "shell",
             "command": "cp",
             "args": [
                 "${workspaceFolder}/target/debug/zoic",
                 "${workspaceFolder}/files/zoic"
             ],
+            "dependsOn": ["Build Compiler"],
             "problemMatcher": [],
             "group": {
                 "kind": "build",
@@ -65,9 +66,8 @@
         {
             "label": "Prepare Dev",
             "dependsOn": [
-                "Build Compiler",
+                "Build and Copy Compiler",
                 "Build LSP",
-                "Copy Compiler",
                 "npm: watch",
             ],
             "dependsOrder": "sequence",
