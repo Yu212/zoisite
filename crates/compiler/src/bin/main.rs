@@ -15,6 +15,7 @@ enum EmitFormat {
 #[command(name = "Zoisite")]
 #[clap(author, version, about)]
 struct Args {
+    #[clap(help = "Path to the Zoisite source file")]
     input: String,
 
     #[clap(
@@ -22,13 +23,16 @@ struct Args {
         value_enum,
         value_delimiter = ',',
         default_values_t = [EmitFormat::Ir, EmitFormat::Submission, EmitFormat::Executable],
+        help = "Comma-separated list of output formats: syntaxx, ir, submission, executable",
+        hide_default_value = true,
+        hide_possible_values = true,
     )]
     emit: Vec<EmitFormat>,
 
-    #[clap(short = 'O', long = "optimize")]
+    #[clap(short = 'O', long = "optimize", help = "Enable optimizations")]
     optimize: bool,
 
-    #[clap(short = 'd', long = "debug")]
+    #[clap(short = 'd', long = "debug", help = "Enable debug information")]
     debug: bool,
 }
 
