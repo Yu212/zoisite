@@ -3,6 +3,7 @@ use std::fs;
 use zoisite::*;
 
 #[derive(Parser, Debug)]
+#[command(name = "Zoisite")]
 #[clap(author, version, about)]
 struct Args {
     input: String,
