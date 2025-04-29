@@ -34,18 +34,15 @@
         },
         {
             "label": "Build LSP Server",
-            "type": "cargo",
-            "command": "build",
-            "args": [
-                "--package=zoisite-lsp",
-                "--bin=zoisite-lsp"
-            ],
-            "problemMatcher": [
-                "$rustc"
-            ],
+            "type": "npm",
+            "script": "build-server",
+            "problemMatcher": "$tsc",
+            "options": {
+                "cwd": "${workspaceFolder}/vscode"
+            },
             "group": {
                 "kind": "build",
-                "isDefault": false
+                "isDefault": true
             }
         },
         {
@@ -67,7 +64,7 @@
             "label": "Prepare Dev",
             "dependsOn": [
                 "Build and Copy Compiler",
-                "Build LSP",
+                "Build LSP Server",
                 "npm: watch",
             ],
             "dependsOrder": "sequence",

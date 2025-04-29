@@ -10,7 +10,9 @@ use inkwell::module::Module;
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::targets::{InitializationConfig, Target};
 use inkwell::OptimizationLevel;
+use language::SyntaxToken;
 use rowan::ast::AstNode;
+use rowan::NodeOrToken;
 use std::fs::File;
 use std::io::Write;
 use std::ops::Index;
@@ -134,6 +136,29 @@ pub struct LifecycleOptions {
     pub output_ir: bool,
     pub output_submission: bool,
     pub output_executable: bool,
+}
+
+pub fn parse(text: &str) -> (Vec<SyntaxToken>, hir::Root, Vec<Diagnostic>) {
+    let lexer = Lexer::new(text);
+    let (tokens, lexer_errors) = lexer.tokenize();
+    let parser = Parser::new(tokens);
+    let (syntax, parser_errors) = parser.parse();
+    let tokens: Vec<_> = syntax.descendants_with_tokens().filter_map(|descendant| match descendant {
+        NodeOrToken::Token(token) => Some(token),
+        _ => None
+    }).collect();
+    let root = Root::cast(syntax).unwrap();
+    let mut db = Database::new();
+    let (hir, lower_errors) = db.lower_root(root);
+    if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
+        return (tokens, hir, [lexer_errors, parser_errors, lower_errors].concat());
+    }
+    let type_infer = TypeInfer::new(&mut db);
+    let (_, type_check_errors) = type_infer.infer(hir.clone());
+    if !type_check_errors.is_empty() {
+        return (tokens, hir, type_check_errors);
+    }
+    (tokens, hir, Vec::new())
 }
 
 pub fn run_lifecycle(text: &str, opts: LifecycleOptions) -> bool {
