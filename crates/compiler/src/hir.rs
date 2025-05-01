@@ -125,6 +125,29 @@ pub enum Expr {
     },
 }
 
+impl Expr {
+    pub fn range(&self) -> TextRange {
+        match self {
+            Expr::Missing => TextRange::default(),
+            Expr::Binary { range, .. }
+            | Expr::Unary { range, .. }
+            | Expr::Ref { range, .. }
+            | Expr::Tuple { range, .. }
+            | Expr::If { range, .. }
+            | Expr::FnCall { range, .. }
+            | Expr::Index { range, .. }
+            | Expr::Block { range, .. }
+            | Expr::NoneLiteral { range }
+            | Expr::IntLiteral { range, .. }
+            | Expr::FloatLiteral { range, .. }
+            | Expr::BoolLiteral { range, .. }
+            | Expr::StringLiteral { range, .. }
+            | Expr::CharLiteral { range, .. }
+            | Expr::ArrayLiteral { range, .. } => *range,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Identifier {
     pub name: EcoString,

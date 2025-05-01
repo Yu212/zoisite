@@ -68,6 +68,13 @@ impl TypeInfer<'_> {
                 var_info.ty.replace(inferred.into());
             }
         }
+        for (expr, ty) in self.inferred.expr_tys.iter() {
+            let inferred = self.inferred.substitute(ty);
+            if inferred.contains_ty_var() {
+                let range = self.db.exprs[expr].range();
+                self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeInferenceFailure, range));
+            }
+        }
         for fn_info in &mut self.db.resolve_ctx.functions {
             fn_info.instances = fn_info.instances.iter().map(|instance| self.inferred.substitute_func(instance)).unique().collect();
         }
