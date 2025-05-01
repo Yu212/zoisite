@@ -143,7 +143,12 @@ impl<'a> Lexer<'a> {
 
     fn number(&mut self) -> SyntaxKind {
         self.s.eat_while(char::is_ascii_digit);
-        SyntaxKind::Number
+        if self.s.eat_if('.') {
+            self.s.eat_while(char::is_ascii_digit);
+            SyntaxKind::Float
+        } else {
+            SyntaxKind::Integer
+        }
     }
 }
 
@@ -160,7 +165,7 @@ mod tests {
 
     #[test]
     fn number() {
-        insta::assert_debug_snapshot!(tokenize("1 23"));
+        insta::assert_debug_snapshot!(tokenize("0 23 1.1"));
     }
 
     #[test]

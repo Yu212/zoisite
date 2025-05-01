@@ -1,5 +1,5 @@
 ---
-source: src/grammar.rs
+source: crates/compiler/src/grammar.rs
 expression: "parse(\"{1} + {2};\")"
 ---
 (
@@ -10,7 +10,7 @@ expression: "parse(\"{1} + {2};\")"
             OpenBrace@0..1 "{"
             ExprStmt@1..2
               IntLiteral@1..2
-                Number@1..2 "1"
+                Integer@1..2 "1"
             CloseBrace@2..3 "}"
             Whitespace@3..4 " "
           Plus@4..5 "+"
@@ -19,7 +19,7 @@ expression: "parse(\"{1} + {2};\")"
             OpenBrace@6..7 "{"
             ExprStmt@7..8
               IntLiteral@7..8
-                Number@7..8 "2"
+                Integer@7..8 "2"
             CloseBrace@8..9 "}"
       Semicolon@9..10 ";"
     ,

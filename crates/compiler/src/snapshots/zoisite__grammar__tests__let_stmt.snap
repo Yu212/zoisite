@@ -1,5 +1,5 @@
 ---
-source: src/grammar.rs
+source: crates/compiler/src/grammar.rs
 expression: "parse(\"let a: int = 1;\")"
 ---
 (
@@ -17,7 +17,7 @@ expression: "parse(\"let a: int = 1;\")"
         Equals@11..12 "="
         Whitespace@12..13 " "
         IntLiteral@13..14
-          Number@13..14 "1"
+          Integer@13..14 "1"
       Semicolon@14..15 ";"
     ,
     [],

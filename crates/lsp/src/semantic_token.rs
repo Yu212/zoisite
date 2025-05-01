@@ -28,7 +28,8 @@ pub fn get_semantic_tokens(tokens: Vec<SyntaxToken>, rope: &Rope) -> Vec<Semanti
             SyntaxKind::FunKw => SemanticTokenType::KEYWORD,
             SyntaxKind::TrueKw => SemanticTokenType::KEYWORD,
             SyntaxKind::FalseKw => SemanticTokenType::KEYWORD,
-            SyntaxKind::Number => SemanticTokenType::NUMBER,
+            SyntaxKind::Integer => SemanticTokenType::NUMBER,
+            SyntaxKind::Float => SemanticTokenType::NUMBER,
             _ => return None,
         };
         let range = text_range_to_range(token.text_range(), rope);

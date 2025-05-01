@@ -1,12 +1,12 @@
 ---
-source: src/lexer.rs
-expression: "tokenize(\"1 23\")"
+source: crates/compiler/src/lexer.rs
+expression: "tokenize(\"0 23 1.1\")"
 ---
 (
     [
         Token {
-            kind: Number,
-            text: "1",
+            kind: Integer,
+            text: "0",
             range: 0..1,
         },
         Token {
@@ -15,14 +15,24 @@ expression: "tokenize(\"1 23\")"
             range: 1..2,
         },
         Token {
-            kind: Number,
+            kind: Integer,
             text: "23",
             range: 2..4,
         },
         Token {
+            kind: Whitespace,
+            text: " ",
+            range: 4..5,
+        },
+        Token {
+            kind: Float,
+            text: "1.1",
+            range: 5..8,
+        },
+        Token {
             kind: Eof,
             text: "",
-            range: 4..4,
+            range: 8..8,
         },
     ],
     [],

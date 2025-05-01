@@ -1,5 +1,5 @@
 ---
-source: src/grammar.rs
+source: crates/compiler/src/grammar.rs
 expression: "parse(\"let a: (int[]?, str, (char?, unit)) = 0;\")"
 ---
 (
@@ -42,7 +42,7 @@ expression: "parse(\"let a: (int[]?, str, (char?, unit)) = 0;\")"
         Equals@36..37 "="
         Whitespace@37..38 " "
         IntLiteral@38..39
-          Number@38..39 "0"
+          Integer@38..39 "0"
       Semicolon@39..40 ";"
     ,
     [],

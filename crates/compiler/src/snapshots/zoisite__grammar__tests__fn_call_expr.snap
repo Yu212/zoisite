@@ -1,5 +1,5 @@
 ---
-source: src/grammar.rs
+source: crates/compiler/src/grammar.rs
 expression: "parse(\"f(a, 1);\")"
 ---
 (
@@ -13,7 +13,7 @@ expression: "parse(\"f(a, 1);\")"
           Comma@3..4 ","
           Whitespace@4..5 " "
           IntLiteral@5..6
-            Number@5..6 "1"
+            Integer@5..6 "1"
           CloseParen@6..7 ")"
       Semicolon@7..8 ";"
     ,

@@ -205,7 +205,8 @@ pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<(CompletedMarke
 pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
     match p.current() {
         SyntaxKind::NoneKw => Some((none_literal(p), false)),
-        SyntaxKind::Number => Some((number_literal(p), false)),
+        SyntaxKind::Integer => Some((integer_literal(p), false)),
+        SyntaxKind::Float => Some((float_literal(p), false)),
         SyntaxKind::TrueKw | SyntaxKind::FalseKw => Some((bool_literal(p), false)),
         SyntaxKind::String => Some((string_literal(p), false)),
         SyntaxKind::Char => Some((char_literal(p), false)),
@@ -217,7 +218,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
         SyntaxKind::Ident => Some((ref_expr(p), false)),
         SyntaxKind::IfKw => Some(if_expr(p)),
         _ => {
-            p.error_and_recover(&[SyntaxKind::Number, SyntaxKind::String, SyntaxKind::Char, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
+            p.error_and_recover(&[SyntaxKind::Integer, SyntaxKind::Float, SyntaxKind::String, SyntaxKind::Char, SyntaxKind::TrueKw, SyntaxKind::FalseKw, SyntaxKind::OpenBracket, SyntaxKind::Minus, SyntaxKind::OpenParen, SyntaxKind::OpenBrace, SyntaxKind::Ident, SyntaxKind::IfKw], &RECOVERY_SET);
             None
         }
     }
@@ -316,15 +317,18 @@ pub fn none_literal(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::NoneLiteral)
 }
 
-pub fn number_literal(p: &mut Parser<'_>) -> CompletedMarker {
-    assert!(p.at(SyntaxKind::Number));
+pub fn integer_literal(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::Integer));
     let m = p.start();
     p.bump();
-    if p.eat(SyntaxKind::Dot) {
-        m.complete(p, SyntaxKind::FloatLiteral)
-    } else {
-        m.complete(p, SyntaxKind::IntLiteral)
-    }
+    m.complete(p, SyntaxKind::IntLiteral)
+}
+
+pub fn float_literal(p: &mut Parser<'_>) -> CompletedMarker {
+    assert!(p.at(SyntaxKind::Float));
+    let m = p.start();
+    p.bump();
+    m.complete(p, SyntaxKind::FloatLiteral)
 }
 
 pub fn string_literal(p: &mut Parser<'_>) -> CompletedMarker {

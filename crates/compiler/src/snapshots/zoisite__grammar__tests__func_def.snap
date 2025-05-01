@@ -1,5 +1,5 @@
 ---
-source: src/grammar.rs
+source: crates/compiler/src/grammar.rs
 expression: "parse(\"fun f(n: int): int { 1 }\")"
 ---
 (
@@ -27,7 +27,7 @@ expression: "parse(\"fun f(n: int): int { 1 }\")"
           Whitespace@20..21 " "
           ExprStmt@21..23
             IntLiteral@21..23
-              Number@21..22 "1"
+              Integer@21..22 "1"
               Whitespace@22..23 " "
           CloseBrace@23..24 "}"
     ,
