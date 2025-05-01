@@ -1,0 +1,19 @@
+---
+source: crates/compiler/src/lexer.rs
+expression: "tokenize(\"\\'Z\\'\")"
+---
+(
+    [
+        Token {
+            kind: Char,
+            text: "'Z'",
+            range: 0..3,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 3..3,
+        },
+    ],
+    [],
+)

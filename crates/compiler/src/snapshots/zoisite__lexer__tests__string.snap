@@ -1,0 +1,19 @@
+---
+source: crates/compiler/src/lexer.rs
+expression: "tokenize(\"\\\"Zoisite\\\"\")"
+---
+(
+    [
+        Token {
+            kind: String,
+            text: "\"Zoisite\"",
+            range: 0..9,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 9..9,
+        },
+    ],
+    [],
+)

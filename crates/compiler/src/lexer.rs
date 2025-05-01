@@ -169,6 +169,16 @@ mod tests {
     }
 
     #[test]
+    fn string() {
+        insta::assert_debug_snapshot!(tokenize("\"Zoisite\""));
+    }
+
+    #[test]
+    fn char() {
+        insta::assert_debug_snapshot!(tokenize("\'Z\'"));
+    }
+
+    #[test]
     fn operator() {
         insta::assert_debug_snapshot!(tokenize("+ - * / % == != >= <= > < && ||"));
     }
