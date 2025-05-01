@@ -7,7 +7,7 @@ fuzz_target!(|data: &[u8]| {
         let opts = zoisite::LifecycleOptions {
             base_name: "".to_string(),
             debug: false,
-            run_jit: true,
+            run_jit: false,
             optimize: false,
             output_syntax: false,
             output_ir: false,

@@ -9,7 +9,7 @@
                 "run",
                 "main",
                 "--",
-                "-max_total_time=30"
+                "-max_total_time=60"
             ],
             "problemMatcher": [
                 "$rustc"
