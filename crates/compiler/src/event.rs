@@ -15,7 +15,7 @@ pub enum Event {
     Error(Diagnostic),
 }
 
-pub fn process(events: &mut Vec<Event>, tokens: Vec<Token>) -> (SyntaxNode, Vec<Diagnostic>) {
+pub fn process(events: &mut [Event], tokens: Vec<Token>) -> (SyntaxNode, Vec<Diagnostic>) {
     let mut diagnostics = Vec::new();
     let mut builder = GreenNodeBuilder::new();
     let mut forward_parents = Vec::new();

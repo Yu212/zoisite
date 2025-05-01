@@ -75,7 +75,7 @@ pub fn continue_stmt(p: &mut Parser<'_>) -> CompletedMarker {
 pub fn expr_stmt(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
     let m = p.start();
     let res = expr(p, 0);
-    let ends_with_block = res.map_or(false, |r| r.1);
+    let ends_with_block = res.is_some_and(|r| r.1);
     (m.complete(p, SyntaxKind::ExprStmt), !ends_with_block)
 }
 
@@ -267,10 +267,10 @@ pub fn if_expr(p: &mut Parser<'_>) -> (CompletedMarker, bool) {
     expr(p, 0);
     p.expect(SyntaxKind::CloseParen);
     let res = expr(p, 0);
-    let mut ends_with_block = res.map_or(false, |r| r.1);
+    let mut ends_with_block = res.is_some_and(|r| r.1);
     if p.eat(SyntaxKind::ElseKw) {
         let res = expr(p, 0);
-        ends_with_block = res.map_or(false, |r| r.1);
+        ends_with_block = res.is_some_and(|r| r.1);
     }
     (m.complete(p, SyntaxKind::IfExpr), ends_with_block)
 }

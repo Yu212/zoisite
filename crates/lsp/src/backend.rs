@@ -93,7 +93,7 @@ fn parse(text: &str, rope: &Rope) -> (Vec<SemanticToken>, hir::Root, Vec<Diagnos
 }
 
 pub fn text_range_to_range(text_range: TextRange, rope: &Rope) -> Range {
-    Range::new(text_size_to_position(text_range.start(), &rope), text_size_to_position(text_range.end(), &rope))
+    Range::new(text_size_to_position(text_range.start(), rope), text_size_to_position(text_range.end(), rope))
 }
 
 pub fn text_size_to_position(text_size: TextSize, rope: &Rope) -> Position {

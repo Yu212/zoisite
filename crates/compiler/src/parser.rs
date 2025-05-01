@@ -42,7 +42,7 @@ impl<'a> Parser<'a> {
                 temp_cursor += 1;
             }
         }
-        self.tokens[temp_cursor].kind.clone()
+        self.tokens[temp_cursor].kind
     }
     fn current_range(&self) -> TextRange {
         self.tokens[self.cursor].range

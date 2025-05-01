@@ -15,8 +15,8 @@ pub struct ResolveContext {
     next_ty_var_id: usize,
 }
 
-impl ResolveContext {
-    pub fn new() -> Self {
+impl Default for ResolveContext {
+    fn default() -> Self {
         let global_place = Place(0);
         let root_place = Place(1);
         ResolveContext {
@@ -28,6 +28,9 @@ impl ResolveContext {
             next_ty_var_id: 0,
         }
     }
+}
+
+impl ResolveContext {
     pub fn define_builtins(&mut self) {
         self.define_global_fn(EcoString::from("printInt"), vec![EcoString::from("n")], vec![Type::Int], Type::Unit);
         self.define_global_fn(EcoString::from("printFloat"), vec![EcoString::from("n")], vec![Type::Float], Type::Unit);

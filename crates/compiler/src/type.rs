@@ -37,7 +37,7 @@ impl Type {
             Type::Str => false,
             Type::Char => false,
             Type::Array(inner_ty) => inner_ty.contains_ty_var(),
-            Type::Tuple(inner_tys) => inner_tys.into_iter().any(Self::contains_ty_var),
+            Type::Tuple(inner_tys) => inner_tys.iter().any(Self::contains_ty_var),
             Type::Option(inner_ty) => inner_ty.contains_ty_var(),
             Type::Invalid => false,
         }
@@ -61,7 +61,7 @@ impl Type {
         match self {
             Type::TyVar(ty_var_id) => BTreeSet::from([*ty_var_id]),
             Type::Array(inner_ty) => inner_ty.list_ty_var(),
-            Type::Tuple(inner_tys) => inner_tys.into_iter().flat_map(|inner_ty| inner_ty.list_ty_var()).collect(),
+            Type::Tuple(inner_tys) => inner_tys.iter().flat_map(|inner_ty| inner_ty.list_ty_var()).collect(),
             Type::Option(inner_ty) => inner_ty.list_ty_var(),
             _ => BTreeSet::new(),
         }
@@ -76,7 +76,7 @@ impl Type {
             Type::Str => "s".to_owned(),
             Type::Char => "c".to_owned(),
             Type::Array(inner_ty) => inner_ty.mangle() + "[]",
-            Type::Tuple(inner_tys) => inner_tys.into_iter().map(Self::mangle).join(""),
+            Type::Tuple(inner_tys) => inner_tys.iter().map(Self::mangle).join(""),
             Type::Option(inner_ty) => inner_ty.mangle() + "?",
             Type::Invalid => "x".to_owned(),
         }

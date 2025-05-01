@@ -13,6 +13,7 @@ use crate::r#type::Type;
 use crate::resolve_context::ResolveContext;
 use crate::syntax_kind::SyntaxKind;
 
+#[derive(Default)]
 pub struct Database {
     pub exprs: Arena<Expr>,
     pub stmts: Arena<Stmt>,
@@ -23,16 +24,6 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new() -> Self {
-        Database {
-            exprs: Arena::default(),
-            stmts: Arena::default(),
-            funcs: Arena::default(),
-            resolve_ctx: ResolveContext::new(),
-            diagnostics: Vec::new(),
-            loop_nest: 0,
-        }
-    }
     pub fn lower_root(&mut self, ast: ast::Root) -> (Root, Vec<Diagnostic>) {
         self.resolve_ctx.define_builtins();
         let root = Root {

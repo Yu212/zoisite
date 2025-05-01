@@ -40,7 +40,7 @@ pub mod visitor;
 
 fn print_errors(label: &str, errors: &[Diagnostic], text: &str) {
     if !errors.is_empty() {
-        eprintln!("{}:", label);
+        eprintln!("{label}:");
         for err in errors {
             eprintln!("{:?} {:?}", err, text.index(err.range));
         }
@@ -48,9 +48,9 @@ fn print_errors(label: &str, errors: &[Diagnostic], text: &str) {
 }
 
 pub fn generate_submission_file(base_name: &str, code: &str, ir_code: &str) {
-    let filename = format!("{}.submission.ll", base_name);
+    let filename = format!("{base_name}.submission.ll");
     let mut submission_file = File::create(&filename).unwrap();
-    let commented_code = code.lines().map(|line| format!("; {}", line)).collect::<Vec<_>>().join("\n");
+    let commented_code = code.lines().map(|line| format!("; {line}")).collect::<Vec<_>>().join("\n");
     let version = env!("CARGO_PKG_VERSION");
     let submission_str = format!("\
 ; compiled from Zoisite v{version}
@@ -73,7 +73,7 @@ pub fn compile_to_executable(base_name: &str, ir_code: &str) {
         .arg("-O2")
         .arg("-")
         .arg("-o")
-        .arg(format!("{}.out", base_name))
+        .arg(format!("{base_name}.out"))
         .stdin(Stdio::piped())
         .spawn()
         .unwrap();
@@ -148,7 +148,7 @@ pub fn parse(text: &str) -> (Vec<SyntaxToken>, hir::Root, Vec<Diagnostic>) {
         _ => None
     }).collect();
     let root = Root::cast(syntax).unwrap();
-    let mut db = Database::new();
+    let mut db = Database::default();
     let (hir, lower_errors) = db.lower_root(root);
     if !lexer_errors.is_empty() || !parser_errors.is_empty() || !lower_errors.is_empty() {
         return (tokens, hir, [lexer_errors, parser_errors, lower_errors].concat());
@@ -172,9 +172,9 @@ pub fn run_lifecycle(text: &str, opts: LifecycleOptions) -> bool {
     if opts.output_syntax {
         let path = format!("{}.syntax", opts.base_name);
         let mut file = File::create(&path).unwrap();
-        writeln!(file, "{:#?}", syntax).unwrap();
+        writeln!(file, "{syntax:#?}").unwrap();
         if opts.debug {
-            println!("Syntax tree written to {}", path);
+            println!("Syntax tree written to {path}");
         }
     }
 
@@ -187,7 +187,7 @@ pub fn run_lifecycle(text: &str, opts: LifecycleOptions) -> bool {
     }
 
     let root = Root::cast(syntax).unwrap();
-    let mut db = Database::new();
+    let mut db = Database::default();
     let (hir, lower_errs) = db.lower_root(root);
     if opts.debug {
         print_errors("lower errors", &lower_errs, text);
@@ -220,7 +220,7 @@ pub fn run_lifecycle(text: &str, opts: LifecycleOptions) -> bool {
         let mut file = File::create(&path).unwrap();
         file.write_all(ir.as_bytes()).unwrap();
         if opts.debug {
-            println!("IR written to {}", path);
+            println!("IR written to {path}");
         }
     }
 

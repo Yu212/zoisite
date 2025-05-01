@@ -26,7 +26,7 @@ pub struct TypeInferResult {
 impl TypeInferResult {
     pub fn expr_ty(&self, idx: ExprIdx) -> Type {
         let ty = self.expr_tys.get(idx).unwrap().clone();
-        self.substitute(&ty).into()
+        self.substitute(&ty)
     }
 
     pub fn substitute(&self, ty: &Type) -> Type {
@@ -60,12 +60,12 @@ impl TypeInfer<'_> {
         self.visit_root(root);
         for (&var_id, ty) in self.ty_env.iter() {
             let var_info = self.db.resolve_ctx.get_var(var_id);
-            let inferred = self.inferred.substitute(&ty);
+            let inferred = self.inferred.substitute(ty);
             if inferred.contains_ty_var() {
                 let range = var_info.ident.clone().unwrap().range;
                 self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeInferenceFailure, range));
             } else {
-                var_info.ty.replace(inferred.into());
+                var_info.ty.replace(inferred);
             }
         }
         for (expr, ty) in self.inferred.expr_tys.iter() {
@@ -84,16 +84,16 @@ impl TypeInfer<'_> {
 
     fn mismatched(&mut self, ty1: &Type, ty2: &Type, range: TextRange) {
         self.diagnostics.push(Diagnostic::new(DiagnosticKind::TypeMismatched {
-            ty1: self.inferred.substitute(ty1).into(),
-            ty2: self.inferred.substitute(ty2).into(),
+            ty1: self.inferred.substitute(ty1),
+            ty2: self.inferred.substitute(ty2),
         }, range));
     }
 
     fn invalid_operation(&mut self, op: BinaryOp, ty1: &Type, ty2: &Type, range: TextRange) {
         self.diagnostics.push(Diagnostic::new(DiagnosticKind::InvalidOperation {
             op,
-            ty1: self.inferred.substitute(ty1).into(),
-            ty2: self.inferred.substitute(ty2).into(),
+            ty1: self.inferred.substitute(ty1),
+            ty2: self.inferred.substitute(ty2),
         }, range));
     }
 
@@ -123,13 +123,13 @@ impl TypeInfer<'_> {
             (&Type::Bool, &Type::Bool) => Some(Type::Bool),
             (&Type::Str, &Type::Str) => Some(Type::Str),
             (&Type::Char, &Type::Char) => Some(Type::Char),
-            (&Type::Array(ref inner_ty1), &Type::Array(ref inner_ty2)) => {
-                self.unify(&inner_ty1, &inner_ty2, range)?;
+            (Type::Array(inner_ty1), Type::Array(inner_ty2)) => {
+                self.unify(inner_ty1, inner_ty2, range)?;
                 Some(ty1)
             },
-            (&Type::Tuple(ref inner_ty1), &Type::Tuple(ref inner_ty2)) => {
+            (Type::Tuple(inner_ty1), Type::Tuple(inner_ty2)) => {
                 if inner_ty1.len() != inner_ty2.len() {
-                    self.mismatched(&ty1, &ty2, range.clone());
+                    self.mismatched(&ty1, &ty2, range);
                     None
                 } else if inner_ty1.iter().zip(inner_ty2.iter()).all(|(ty1, ty2)| self.unify(ty1, ty2, range).is_some()) {
                     Some(ty1)
@@ -137,12 +137,12 @@ impl TypeInfer<'_> {
                     None
                 }
             },
-            (&Type::Option(ref inner_ty1), &Type::Option(ref inner_ty2)) => {
-                self.unify(&inner_ty1, &inner_ty2, range)?;
+            (Type::Option(inner_ty1), Type::Option(inner_ty2)) => {
+                self.unify(inner_ty1, inner_ty2, range)?;
                 Some(ty1)
             },
             _ => {
-                self.mismatched(&ty1, &ty2, range.clone());
+                self.mismatched(&ty1, &ty2, range);
                 None
             }
         }

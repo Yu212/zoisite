@@ -59,7 +59,7 @@ impl<'ctx> Compiler<'ctx> {
         self.cur_function = Some(function);
         let basic_block = self.context.append_basic_block(function, "entry");
         self.builder.position_at_end(basic_block);
-        self.compile_root(&root)?;
+        self.compile_root(root)?;
         self.builder.build_return(Some(&i32_type.const_int(0, false)))?;
         Ok(self.module)
     }
@@ -216,7 +216,7 @@ impl<'ctx> Compiler<'ctx> {
         {
             let some_fn_info = self.db.resolve_ctx.get_fn(FnId(9));
             for instance in &some_fn_info.instances {
-                let some_fn = self.build_some_fn(&instance)?;
+                let some_fn = self.build_some_fn(instance)?;
                 self.functions.insert((some_fn_info.id, instance.clone()), some_fn);
             }
         }
@@ -226,13 +226,13 @@ impl<'ctx> Compiler<'ctx> {
     pub fn build_some_fn(&mut self, func_ty: &FuncType) -> CompileResult<FunctionValue<'ctx>> {
         let ty = func_ty.params_ty.first().unwrap();
         let llvm_ty = self.compile_ty(ty)?;
-        let some_type = llvm_ty.ptr_type(AddressSpace::default()).fn_type(&[llvm_ty.clone().into()], false);
+        let some_type = llvm_ty.ptr_type(AddressSpace::default()).fn_type(&[llvm_ty.into()], false);
         let mangled_name = format!("some#{}", func_ty.mangle());
         let some_fn = self.module.add_function(&mangled_name, some_type, None);
         let basic_block = self.context.append_basic_block(some_fn, "entry");
         self.builder.position_at_end(basic_block);
         let param = some_fn.get_first_param().unwrap();
-        let ptr = self.builder.build_malloc(llvm_ty.clone(), "ptr")?;
+        let ptr = self.builder.build_malloc(llvm_ty, "ptr")?;
         self.builder.build_store(ptr, param)?;
         self.builder.build_return(Some(&ptr))?;
         Ok(some_fn)
@@ -266,7 +266,7 @@ impl<'ctx> Compiler<'ctx> {
             Stmt::LetStmt { var_id, expr, range: _ } => {
                 let var_id = var_id.ok_or(self.compiler_error("Variable id is None"))?;
                 let var_info = self.db.resolve_ctx.get_var(var_id);
-                let ty = self.compile_ty(&*var_info.ty.borrow())?;
+                let ty = self.compile_ty(&var_info.ty.borrow())?;
                 let i8_type = self.context.i8_type();
                 let var = self.db.resolve_ctx.get_var(var_id);
                 let addr = self.builder.build_alloca(ty, var.name.as_str())?;
@@ -475,7 +475,7 @@ impl<'ctx> Compiler<'ctx> {
             Expr::Ref { var_id, range: _ } => {
                 let var_id = var_id.ok_or(self.compiler_error("Variable id is None"))?;
                 let var_info = self.db.resolve_ctx.get_var(var_id);
-                let ty = self.compile_ty(&*var_info.ty.borrow())?;
+                let ty = self.compile_ty(&var_info.ty.borrow())?;
                 let ptr = self.addresses[&var_id];
                 Ok(self.builder.build_load(ty, ptr, "tmp")?)
             },
@@ -522,9 +522,9 @@ impl<'ctx> Compiler<'ctx> {
                 let fn_ty = self.type_inferred.fn_calls.get(idx).ok_or(self.compiler_error("Function type is missing"))?.clone();
                 let function = self.functions[&(fn_id, fn_ty)];
                 let args: Vec<_> = args.iter()
-                    .map(|&expr| self.compile_expr_idx(expr).map(|expr| BasicMetadataValueEnum::from(expr)))
+                    .map(|&expr| self.compile_expr_idx(expr).map(BasicMetadataValueEnum::from))
                     .collect::<Result<_, _>>()?;
-                let call_site = self.builder.build_call(function, &*args, "tmp")?;
+                let call_site = self.builder.build_call(function, &args, "tmp")?;
                 let ret_val = call_site.try_as_basic_value().left().ok_or(self.compiler_error("Return value is not a basic value"))?;
                 Ok(ret_val)
             },
@@ -545,14 +545,14 @@ impl<'ctx> Compiler<'ctx> {
                     let ptr = self.builder.build_load(i8_ptr_type, ptr_ptr, "str")?;
                     let val_ptr = unsafe { self.builder.build_gep(i8_type, ptr.into_pointer_value(), &[index_val], "ptr")? };
 
-                    Ok(self.builder.build_load(i8_type, val_ptr, "tmp")?.into())
+                    Ok(self.builder.build_load(i8_type, val_ptr, "tmp")?)
                 } else {
                     let inner_ty = main_ty.inner_ty().ok_or(self.compiler_error("Indexed values do not have an inner type"))?;
                     let inner_ty = self.compile_ty(&inner_ty)?;
                     let main_val = self.compile_expr_idx(main_expr)?.into_pointer_value();
                     let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
                     let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr")? };
-                    Ok(self.builder.build_load(inner_ty, val_ptr, "tmp")?.into())
+                    Ok(self.builder.build_load(inner_ty, val_ptr, "tmp")?)
                 }
             },
             Expr::Block { stmts, range: _ } => {
