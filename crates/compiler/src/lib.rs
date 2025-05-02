@@ -37,6 +37,7 @@ pub mod scope;
 pub mod type_infer;
 pub mod r#type;
 pub mod visitor;
+pub mod builtins;
 
 fn print_errors(label: &str, errors: &[Diagnostic], text: &str) {
     if !errors.is_empty() {

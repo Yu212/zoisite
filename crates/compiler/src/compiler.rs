@@ -1,3 +1,4 @@
+use crate::builtins::add_builtins;
 use crate::database::Database;
 use crate::hir::{BinaryOp, Expr, ExprIdx, Func, Root, Stmt, UnaryOp};
 use crate::r#type::{FuncType, Type};
@@ -7,12 +8,12 @@ use inkwell::basic_block::BasicBlock;
 use inkwell::builder::{Builder, BuilderError};
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::types::{BasicType, BasicTypeEnum};
+use inkwell::types::{BasicType, BasicTypeEnum, FunctionType};
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue, StructValue};
 use inkwell::{AddressSpace, IntPredicate};
 use std::collections::HashMap;
 
-type CompileResult<T> = Result<T, CompileError>;
+pub(crate) type CompileResult<T> = Result<T, CompileError>;
 
 pub struct Compiler<'ctx> {
     pub db: &'ctx Database,
@@ -48,7 +49,7 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     pub fn compile(mut self, root: &Root) -> CompileResult<Module<'ctx>> {
-        self.add_builtins()?;
+        add_builtins(&mut self)?;
         let funcs: Vec<_> = self.db.funcs.values().cloned().collect();
         for func in funcs {
             self.compile_func(func.clone())?;
@@ -64,181 +65,14 @@ impl<'ctx> Compiler<'ctx> {
         Ok(self.module)
     }
 
-    fn compile_root(&mut self, root: &Root) -> CompileResult<()> {
+    pub(crate) fn compile_root(&mut self, root: &Root) -> CompileResult<()> {
         for &stmt in &root.stmts {
             self.compile_stmt(self.db.stmts[stmt].clone())?;
         }
         Ok(())
     }
 
-    pub fn add_builtins(&mut self) -> CompileResult<()> {
-        let i64_type = self.context.i64_type();
-        let f64_type = self.context.f64_type();
-        let i8_type = self.context.i8_type();
-        let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
-        let void_type = self.context.void_type();
-        let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
-        let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
-        let printf_function = self.module.add_function("printf", printf_type, None);
-        let scanf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
-        let scanf_function = self.module.add_function("scanf", scanf_type, None);
-        let sprintf_type = void_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], true);
-        let sprintf_function = self.module.add_function("sprintf", sprintf_type, None);
-        let strlen_type = i64_type.fn_type(&[i8_ptr_type.into()], true);
-        let strlen_function = self.module.add_function("strlen", strlen_type, None);
-        {
-            let print_type = i8_type.fn_type(&[i64_type.into()], false);
-            let print_fn = self.module.add_function("printInt", print_type, None);
-            let basic_block = self.context.append_basic_block(print_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%lld\n", "printf_int_format")?;
-            let param = print_fn.get_first_param().unwrap();
-            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), param.into()], "")?;
-            self.builder.build_return(Some(&i8_type.const_int(0, false)))?;
-            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(0));
-            self.functions.insert((print_fn_info.id, print_fn_info.ty.clone()), print_fn);
-        }
-        {
-            let print_type = i8_type.fn_type(&[f64_type.into()], false);
-            let print_fn = self.module.add_function("printFloat", print_type, None);
-            let basic_block = self.context.append_basic_block(print_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%.10lf\n", "printf_float_format")?;
-            let param = print_fn.get_first_param().unwrap();
-            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), param.into()], "")?;
-            self.builder.build_return(Some(&i8_type.const_int(0, false)))?;
-            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(1));
-            self.functions.insert((print_fn_info.id, print_fn_info.ty.clone()), print_fn);
-        }
-        {
-            let print_type = i8_type.fn_type(&[str_type.into()], false);
-            let print_fn = self.module.add_function("printStr", print_type, None);
-            let basic_block = self.context.append_basic_block(print_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%s\n", "printf_str_format")?;
-            let param = print_fn.get_first_param().unwrap();
-            let str_ptr = self.builder.build_alloca(str_type, "str")?;
-            self.builder.build_store(str_ptr, param.into_struct_value())?;
-
-            let ptr_ptr = self.builder.build_struct_gep(str_type, str_ptr, 1, "ptr")?;
-            let ptr = self.builder.build_load(i8_ptr_type, ptr_ptr, "str")?;
-
-            self.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), ptr.into()], "")?;
-            self.builder.build_return(Some(&i8_type.const_int(0, false)))?;
-            let print_fn_info = self.db.resolve_ctx.get_fn(FnId(2));
-            self.functions.insert((print_fn_info.id, print_fn_info.ty.clone()), print_fn);
-        }
-        {
-            let input_type = i64_type.fn_type(&[], false);
-            let input_fn = self.module.add_function("inputInt", input_type, None);
-            let basic_block = self.context.append_basic_block(input_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%lld", "scanf_int_format")?;
-            let scanf_ptr = self.builder.build_alloca(i64_type, "scanf_ptr")?;
-            self.builder.build_call(scanf_function, &[format_str.as_pointer_value().into(), scanf_ptr.into()], "")?;
-            let val = self.builder.build_load(i64_type, scanf_ptr, "tmp")?;
-            self.builder.build_return(Some(&val))?;
-
-            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(3));
-            self.functions.insert((input_fn_info.id, input_fn_info.ty.clone()), input_fn);
-        }
-        {
-            let input_type = str_type.fn_type(&[i64_type.into()], false);
-            let input_fn = self.module.add_function("inputStr", input_type, None);
-            let basic_block = self.context.append_basic_block(input_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%s", "scanf_str_format")?;
-            let param = input_fn.get_first_param().unwrap();
-            let scanf_ptr = self.builder.build_array_malloc(i8_type, param.into_int_value(), "str")?;
-            self.builder.build_call(scanf_function, &[format_str.as_pointer_value().into(), scanf_ptr.into()], "")?;
-
-            let call_site = self.builder.build_call(strlen_function, &[scanf_ptr.into()], "")?;
-            let len = call_site.try_as_basic_value().unwrap_left();
-            let result = self.build_str_struct(len.into_int_value(), scanf_ptr)?;
-
-            self.builder.build_return(Some(&result))?;
-            let input_fn_info = self.db.resolve_ctx.get_fn(FnId(4));
-            self.functions.insert((input_fn_info.id, input_fn_info.ty.clone()), input_fn);
-        }
-        {
-            let chr_type = i8_type.fn_type(&[i64_type.into()], false);
-            let chr_fn = self.module.add_function("chr", chr_type, None);
-            let basic_block = self.context.append_basic_block(chr_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let param = chr_fn.get_first_param().unwrap().into_int_value();
-            let ret_val = self.builder.build_int_truncate(param, i8_type, "tmp")?;
-            self.builder.build_return(Some(&ret_val))?;
-            let chr_fn_info = self.db.resolve_ctx.get_fn(FnId(5));
-            self.functions.insert((chr_fn_info.id, chr_fn_info.ty.clone()), chr_fn);
-        }
-        {
-            let ord_type = i64_type.fn_type(&[i8_type.into()], false);
-            let ord_fn = self.module.add_function("ord", ord_type, None);
-            let basic_block = self.context.append_basic_block(ord_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let param = ord_fn.get_first_param().unwrap().into_int_value();
-            let ret_val = self.builder.build_int_z_extend(param, i64_type, "tmp")?;
-            self.builder.build_return(Some(&ret_val))?;
-            let ord_fn_info = self.db.resolve_ctx.get_fn(FnId(6));
-            self.functions.insert((ord_fn_info.id, ord_fn_info.ty.clone()), ord_fn);
-        }
-        {
-            let str_type = str_type.fn_type(&[i64_type.into()], false);
-            let str_fn = self.module.add_function("str", str_type, None);
-            let basic_block = self.context.append_basic_block(str_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let format_str = self.builder.build_global_string_ptr("%lld", "sprintf_str_format")?;
-            let param = str_fn.get_first_param().unwrap();
-            let sprintf_ptr = self.builder.build_array_malloc(i8_type, i64_type.const_int(21, false), "str")?;
-            self.builder.build_call(sprintf_function, &[sprintf_ptr.into(), format_str.as_pointer_value().into(), param.into()], "")?;
-
-            let call_site = self.builder.build_call(strlen_function, &[sprintf_ptr.into()], "")?;
-            let len = call_site.try_as_basic_value().unwrap_left();
-            let result = self.build_str_struct(len.into_int_value(), sprintf_ptr)?;
-
-            self.builder.build_return(Some(&result))?;
-            let str_fn_info = self.db.resolve_ctx.get_fn(FnId(7));
-            self.functions.insert((str_fn_info.id, str_fn_info.ty.clone()), str_fn);
-        }
-        {
-            let float_type = f64_type.fn_type(&[i64_type.into()], false);
-            let float_fn = self.module.add_function("float", float_type, None);
-            let basic_block = self.context.append_basic_block(float_fn, "entry");
-            self.builder.position_at_end(basic_block);
-            let param = float_fn.get_first_param().unwrap();
-            
-            let result = self.builder.build_signed_int_to_float(param.into_int_value(), f64_type, "float")?;
-
-            self.builder.build_return(Some(&result))?;
-            let float_fn_info = self.db.resolve_ctx.get_fn(FnId(8));
-            self.functions.insert((float_fn_info.id, float_fn_info.ty.clone()), float_fn);
-        }
-        {
-            let some_fn_info = self.db.resolve_ctx.get_fn(FnId(9));
-            for instance in &some_fn_info.instances {
-                let some_fn = self.build_some_fn(instance)?;
-                self.functions.insert((some_fn_info.id, instance.clone()), some_fn);
-            }
-        }
-        Ok(())
-    }
-
-    pub fn build_some_fn(&mut self, func_ty: &FuncType) -> CompileResult<FunctionValue<'ctx>> {
-        let ty = func_ty.params_ty.first().unwrap();
-        let llvm_ty = self.compile_ty(ty)?;
-        let some_type = llvm_ty.ptr_type(AddressSpace::default()).fn_type(&[llvm_ty.into()], false);
-        let mangled_name = format!("some#{}", func_ty.mangle());
-        let some_fn = self.module.add_function(&mangled_name, some_type, None);
-        let basic_block = self.context.append_basic_block(some_fn, "entry");
-        self.builder.position_at_end(basic_block);
-        let param = some_fn.get_first_param().unwrap();
-        let ptr = self.builder.build_malloc(llvm_ty, "ptr")?;
-        self.builder.build_store(ptr, param)?;
-        self.builder.build_return(Some(&ptr))?;
-        Ok(some_fn)
-    }
-
-    fn compile_ty(&self, ty: &Type) -> CompileResult<BasicTypeEnum<'ctx>> {
+    pub(crate) fn compile_ty(&self, ty: &Type) -> CompileResult<BasicTypeEnum<'ctx>> {
         match ty {
             Type::TyVar(_) => Err(self.compiler_error("Type variable cannot convert to LLVM type")),
             Type::Unit => Ok(self.context.i8_type().into()),
@@ -256,8 +90,14 @@ impl<'ctx> Compiler<'ctx> {
             Type::Invalid => Err(self.compiler_error("Cannot convert to LLVM type")),
         }
     }
+    
+    pub(crate) fn compile_func_ty(&self, ty: &FuncType) -> CompileResult<FunctionType<'ctx>> {
+        let params_type = ty.params_ty.iter().map(|ty| self.compile_ty(ty).map(|ty| ty.into())).collect::<Result<Vec<_>, _>>()?;
+        let return_ty = self.compile_ty(&ty.return_ty)?;
+        Ok(return_ty.fn_type(params_type.as_slice(), false))
+    }
 
-    fn compile_stmt(&mut self, stmt: Stmt) -> CompileResult<BasicValueEnum<'ctx>> {
+    pub(crate) fn compile_stmt(&mut self, stmt: Stmt) -> CompileResult<BasicValueEnum<'ctx>> {
         match stmt {
             Stmt::EmptyStmt { range: _ } => {
                 let i8_type = self.context.i8_type();
@@ -324,7 +164,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_func(&mut self, func: Func) -> CompileResult<()> {
+    pub(crate) fn compile_func(&mut self, func: Func) -> CompileResult<()> {
         if let Some(fn_info) = func.fn_info {
             let params_type = fn_info.ty.params_ty.iter().map(|ty| self.compile_ty(ty).map(|ty| ty.into())).collect::<Result<Vec<_>, _>>()?;
             let return_ty = self.compile_ty(&fn_info.ty.return_ty)?;
@@ -346,7 +186,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(())
     }
 
-    fn compile_lvalue(&mut self, expr: Expr) -> CompileResult<PointerValue<'ctx>> {
+    pub(crate) fn compile_lvalue(&mut self, expr: Expr) -> CompileResult<PointerValue<'ctx>> {
         match expr {
             Expr::Ref { var_id, range: _ } => {
                 let var_id = var_id.ok_or(self.compiler_error("var"))?;
@@ -383,11 +223,11 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_expr_idx(&mut self, idx: ExprIdx) -> CompileResult<BasicValueEnum<'ctx>> {
+    pub(crate) fn compile_expr_idx(&mut self, idx: ExprIdx) -> CompileResult<BasicValueEnum<'ctx>> {
         self.compile_expr(idx, self.db.exprs[idx].clone())
     }
 
-    fn compile_expr(&mut self, idx: ExprIdx, expr: Expr) -> CompileResult<BasicValueEnum<'ctx>> {
+    pub(crate) fn compile_expr(&mut self, idx: ExprIdx, expr: Expr) -> CompileResult<BasicValueEnum<'ctx>> {
         match expr {
             Expr::Missing => Err(self.compiler_error("Expr is missing")),
             Expr::Binary { op, lhs, rhs, range: _ } => {
@@ -639,7 +479,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
+    pub(crate) fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
         if i + 1 == len_vals.len() {
             unsafe {
                 let ptr = self.builder.build_in_bounds_gep(arr_types[i + 1], all_array, &[all_idx_val], "tmp")?;
@@ -678,7 +518,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(array)
     }
 
-    fn build_str_struct(&mut self, len: IntValue<'ctx>, ptr: PointerValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
+    pub(crate) fn build_str_struct(&mut self, len: IntValue<'ctx>, ptr: PointerValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
         let i64_type = self.context.i64_type();
         let i8_type = self.context.i8_type();
         let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
@@ -687,7 +527,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(self.builder.build_insert_value(result, ptr, 1, "res")?.into_struct_value())
     }
 
-    fn build_str_concat(&mut self, lhs: StructValue<'ctx>, rhs: StructValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
+    pub(crate) fn build_str_concat(&mut self, lhs: StructValue<'ctx>, rhs: StructValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
         let i64_type = self.context.i64_type();
         let i8_type = self.context.i8_type();
         let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
