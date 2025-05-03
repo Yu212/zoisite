@@ -2,6 +2,11 @@
 name = "zoisite"
 version = "0.1.0"
 edition = "2021"
+authors = ["Yu_212 <yu212.mc@gmail.com>"]
+repository = "https://github.com/yu212/zoisite"
+description = "Zoisite is a programming language designed specifically for competitive programming."
+license-file = "../../LICENSE"
+categories = ["compilers"]
 
 [dependencies]
 llvm-sys = "160"

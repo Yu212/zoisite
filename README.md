@@ -2,7 +2,7 @@
 
 ---
 
-Zoisite is a programming language designed exclusively for competitive programming.
+Zoisite is a programming language designed specifically for competitive programming.
 
 ## Installation
 
