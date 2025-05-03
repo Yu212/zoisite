@@ -13,6 +13,7 @@ fuzz_target!(|data: &[u8]| {
             output_ir: false,
             output_submission: false,
             output_executable: false,
+            clang_args: vec![],
         };
         zoisite::run_lifecycle(text, opts);
     }

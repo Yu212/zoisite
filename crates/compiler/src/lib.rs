@@ -67,14 +67,14 @@ ${ir_code}");
     submission_file.write_all(submission_str.as_bytes()).unwrap();
 }
 
-pub fn compile_to_executable(base_name: &str, ir_code: &str) {
+pub fn compile_to_executable(base_name: &str, ir_code: &str, clang_args: &[String]) {
     let mut clang = Command::new("clang")
         .arg("-x")
         .arg("ir")
-        .arg("-O2")
-        .arg("-")
+        .args(clang_args)
         .arg("-o")
         .arg(format!("{base_name}.out"))
+        .arg("-")
         .stdin(Stdio::piped())
         .spawn()
         .unwrap();
@@ -137,6 +137,7 @@ pub struct LifecycleOptions {
     pub output_ir: bool,
     pub output_submission: bool,
     pub output_executable: bool,
+    pub clang_args: Vec<String>,
 }
 
 pub fn parse(text: &str) -> (Vec<SyntaxToken>, hir::Root, Vec<Diagnostic>) {
@@ -233,7 +234,7 @@ pub fn run_lifecycle(text: &str, opts: LifecycleOptions) -> bool {
     }
 
     if opts.output_executable {
-        compile_to_executable(&opts.base_name, &ir);
+        compile_to_executable(&opts.base_name, &ir, &opts.clang_args);
         if opts.debug {
             println!("Executable compiled");
         }

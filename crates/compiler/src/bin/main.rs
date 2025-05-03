@@ -34,6 +34,9 @@ struct Args {
 
     #[clap(short = 'd', long = "debug", help = "Enable debug information")]
     debug: bool,
+
+    #[clap(long, help = "Additional arguments to pass to clang")]
+    clang_args: Option<String>,
 }
 
 fn main() {
@@ -48,6 +51,12 @@ fn main() {
     let source = fs::read_to_string(&args.input)
         .expect("Failed to read source file");
 
+    let clang_args_vec: Vec<String> = args.clang_args
+        .iter()
+        .flat_map(|s| s.split_whitespace())
+        .map(String::from)
+        .collect();
+
     let opts = LifecycleOptions {
         base_name,
         debug: args.debug,
@@ -57,6 +66,7 @@ fn main() {
         output_ir: args.emit.contains(&EmitFormat::Ir),
         output_submission: args.emit.contains(&EmitFormat::Submission),
         output_executable: args.emit.contains(&EmitFormat::Executable),
+        clang_args: clang_args_vec,
     };
 
     if !run_lifecycle(&source, opts) {
