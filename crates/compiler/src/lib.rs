@@ -63,7 +63,7 @@ pub fn generate_submission_file(base_name: &str, code: &str, ir_code: &str) {
 
 
 
-${ir_code}");
+{ir_code}");
     submission_file.write_all(submission_str.as_bytes()).unwrap();
 }
 
