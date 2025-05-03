@@ -8,9 +8,14 @@
             "args": [
                 "run",
                 "main",
+                "--fuzz-dir",
+                ".",
                 "--",
                 "-max_total_time=60"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}/crates/fuzz"
+            },
             "problemMatcher": [
                 "$rustc"
             ],
