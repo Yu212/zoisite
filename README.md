@@ -11,7 +11,7 @@ Zoisite is a programming language designed specifically for competitive programm
 To install the Zoisite compiler:
 
 ```bash
-cargo install --path crates/compiler
+cargo install zoisite
 ```
 
 ### VS Code Extension
