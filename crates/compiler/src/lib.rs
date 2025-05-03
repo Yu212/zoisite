@@ -7,8 +7,8 @@ use crate::parser::Parser;
 use crate::type_infer::TypeInfer;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::passes::{PassManager, PassManagerBuilder};
-use inkwell::targets::{InitializationConfig, Target};
+use inkwell::passes::PassBuilderOptions;
+use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::OptimizationLevel;
 use language::SyntaxToken;
 use rowan::ast::AstNode;
@@ -83,48 +83,13 @@ pub fn compile_to_executable(base_name: &str, ir_code: &str, clang_args: &[Strin
 }
 
 pub fn optimize(module: &Module) {
-    let config = InitializationConfig::default();
-    Target::initialize_native(&config).unwrap();
-    let builder = PassManagerBuilder::create();
-    builder.set_optimization_level(OptimizationLevel::Aggressive);
-    let pm = PassManager::create(());
-    pm.add_promote_memory_to_register_pass();
-    pm.add_always_inliner_pass();
-    pm.add_gvn_pass();
-    pm.add_new_gvn_pass();
-    pm.add_function_attrs_pass();
-    pm.add_constant_merge_pass();
-    pm.add_scalarizer_pass();
-    pm.add_merged_load_store_motion_pass();
-    pm.add_instruction_combining_pass();
-    pm.add_memcpy_optimize_pass();
-    pm.add_partially_inline_lib_calls_pass();
-    pm.add_lower_switch_pass();
-    pm.add_reassociate_pass();
-    pm.add_simplify_lib_calls_pass();
-    pm.add_instruction_simplify_pass();
-    pm.add_function_inlining_pass();
-    pm.add_global_optimizer_pass();
-    pm.add_dead_arg_elimination_pass();
-    pm.add_strip_symbol_pass();
-    pm.add_strip_dead_prototypes_pass();
-    pm.add_internalize_pass(true);
-    pm.add_sccp_pass();
-    pm.add_aggressive_dce_pass();
-    pm.add_global_dce_pass();
-    pm.add_tail_call_elimination_pass();
-    pm.add_basic_alias_analysis_pass();
-    pm.add_licm_pass();
-    pm.add_ind_var_simplify_pass();
-    pm.add_loop_vectorize_pass();
-    pm.add_loop_idiom_pass();
-    pm.add_loop_rotate_pass();
-    pm.add_loop_unroll_pass();
-    pm.add_loop_deletion_pass();
-    pm.add_cfg_simplification_pass();
-    pm.add_verifier_pass();
-    pm.run_on(module);
-    builder.populate_module_pass_manager(&pm);
+    Target::initialize_all(&InitializationConfig::default());
+    let target_triple = TargetMachine::get_default_triple();
+    let cpu = TargetMachine::get_host_cpu_name().to_string();
+    let features = TargetMachine::get_host_cpu_features().to_string();
+    let target = Target::from_triple(&target_triple).unwrap();
+    let target_machine = target.create_target_machine(&target_triple, &cpu, &features, OptimizationLevel::Aggressive, RelocMode::PIC, CodeModel::Default).unwrap();
+    module.run_passes("default<O3>", &target_machine, PassBuilderOptions::create()).unwrap();
 }
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 use crate::compiler::{CompileResult, Compiler};
 use crate::scope::FnId;
-use inkwell::types::FunctionType;
+use inkwell::types::{BasicTypeEnum, FunctionType};
 use inkwell::values::FunctionValue;
 use inkwell::AddressSpace;
 
@@ -20,16 +20,16 @@ pub fn add_builtins(cmp: &mut Compiler) -> CompileResult<()> {
     let i64_type = cmp.context.i64_type();
     let f64_type = cmp.context.f64_type();
     let i8_type = cmp.context.i8_type();
-    let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
+    let ptr_type = cmp.context.ptr_type(AddressSpace::default());
     let void_type = cmp.context.void_type();
-    let str_type = cmp.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
-    let printf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
+    let str_type = cmp.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
+    let printf_type = void_type.fn_type(&[ptr_type.into()], true);
     let printf_function = cmp.module.add_function("printf", printf_type, None);
-    let scanf_type = void_type.fn_type(&[i8_ptr_type.into()], true);
+    let scanf_type = void_type.fn_type(&[ptr_type.into()], true);
     let scanf_function = cmp.module.add_function("scanf", scanf_type, None);
-    let sprintf_type = void_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], true);
+    let sprintf_type = void_type.fn_type(&[ptr_type.into(), ptr_type.into()], true);
     let sprintf_function = cmp.module.add_function("sprintf", sprintf_type, None);
-    let strlen_type = i64_type.fn_type(&[i8_ptr_type.into()], false);
+    let strlen_type = i64_type.fn_type(&[ptr_type.into()], false);
     let strlen_function = cmp.module.add_function("strlen", strlen_type, None);
 
     build_function(cmp, FnId(0), "printInt", |cmp, _, function| {
@@ -59,7 +59,7 @@ pub fn add_builtins(cmp: &mut Compiler) -> CompileResult<()> {
         cmp.builder.build_store(str_ptr, param.into_struct_value())?;
 
         let ptr_ptr = cmp.builder.build_struct_gep(str_type, str_ptr, 1, "ptr")?;
-        let ptr = cmp.builder.build_load(i8_ptr_type, ptr_ptr, "str")?;
+        let ptr = cmp.builder.build_load(ptr_type, ptr_ptr, "str")?;
 
         cmp.builder.build_call(printf_function, &[format_str.as_pointer_value().into(), ptr.into()], "")?;
         cmp.builder.build_return(Some(&i8_type.const_int(0, false)))?;
@@ -129,7 +129,7 @@ pub fn add_builtins(cmp: &mut Compiler) -> CompileResult<()> {
         let basic_block = cmp.context.append_basic_block(function, "entry");
         cmp.builder.position_at_end(basic_block);
         let param = function.get_first_param().unwrap();
-        let ty = llvm_ty.get_param_types()[0];
+        let ty: BasicTypeEnum = llvm_ty.get_param_types()[0].try_into().map_err(|_| cmp.compiler_error("Failed to convert value into BasicTypeEnum"))?;
         let ptr = cmp.builder.build_malloc(ty, "ptr")?;
         cmp.builder.build_store(ptr, param)?;
         cmp.builder.build_return(Some(&ptr))?;

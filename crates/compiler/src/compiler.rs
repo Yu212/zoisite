@@ -44,7 +44,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compiler_error(&self, msg: &str) -> CompileError {
+    pub fn compiler_error(&self, msg: &str) -> CompileError {
         CompileError::CompilerError(msg.to_owned())
     }
 
@@ -79,14 +79,14 @@ impl<'ctx> Compiler<'ctx> {
             Type::Int => Ok(self.context.i64_type().into()),
             Type::Float => Ok(self.context.f64_type().into()),
             Type::Bool => Ok(self.context.bool_type().into()),
-            Type::Str => Ok(self.context.struct_type(&[self.context.i64_type().into(), self.context.i8_type().ptr_type(AddressSpace::default()).into()], false).into()),
+            Type::Str => Ok(self.context.struct_type(&[self.context.i64_type().into(), self.context.ptr_type(AddressSpace::default()).into()], false).into()),
             Type::Char => Ok(self.context.i8_type().into()),
-            Type::Array(inner_ty) => Ok(self.compile_ty(inner_ty)?.ptr_type(AddressSpace::default()).into()),
+            Type::Array(_) => Ok(self.context.ptr_type(AddressSpace::default()).into()),
             Type::Tuple(inner_ty) => {
                 let tys = inner_ty.iter().map(|ty| self.compile_ty(ty)).collect::<Result<Vec<_>, _>>()?;
                 Ok(self.context.struct_type(tys.as_slice(), false).into())
             },
-            Type::Option(inner_ty) => Ok(self.compile_ty(inner_ty)?.ptr_type(AddressSpace::default()).into()),
+            Type::Option(_) => Ok(self.context.ptr_type(AddressSpace::default()).into()),
             Type::Invalid => Err(self.compiler_error("Cannot convert to LLVM type")),
         }
     }
@@ -197,14 +197,14 @@ impl<'ctx> Compiler<'ctx> {
                 if main_ty == &Type::Str {
                     let i64_type = self.context.i64_type();
                     let i8_type = self.context.i8_type();
-                    let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
-                    let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
+                    let ptr_type = self.context.ptr_type(AddressSpace::default());
+                    let str_type = self.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
 
                     let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
                     let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
 
                     let ptr_ptr = self.builder.build_struct_gep(str_type, lvalue, 1, "ptr")?;
-                    let ptr = self.builder.build_load(i8_ptr_type, ptr_ptr, "str")?;
+                    let ptr = self.builder.build_load(ptr_type, ptr_ptr, "str")?;
                     let val_ptr = unsafe { self.builder.build_gep(i8_type, ptr.into_pointer_value(), &[index_val], "ptr")? };
 
                     Ok(val_ptr)
@@ -373,8 +373,8 @@ impl<'ctx> Compiler<'ctx> {
                 if main_ty == &Type::Str {
                     let i64_type = self.context.i64_type();
                     let i8_type = self.context.i8_type();
-                    let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
-                    let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
+                    let ptr_type = self.context.ptr_type(AddressSpace::default());
+                    let str_type = self.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
 
                     let main_val = self.compile_expr_idx(main_expr)?;
                     let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
@@ -382,7 +382,7 @@ impl<'ctx> Compiler<'ctx> {
                     self.builder.build_store(str_ptr, main_val)?;
 
                     let ptr_ptr = self.builder.build_struct_gep(str_type, str_ptr, 1, "ptr")?;
-                    let ptr = self.builder.build_load(i8_ptr_type, ptr_ptr, "str")?;
+                    let ptr = self.builder.build_load(ptr_type, ptr_ptr, "str")?;
                     let val_ptr = unsafe { self.builder.build_gep(i8_type, ptr.into_pointer_value(), &[index_val], "ptr")? };
 
                     Ok(self.builder.build_load(i8_type, val_ptr, "tmp")?)
@@ -437,15 +437,12 @@ impl<'ctx> Compiler<'ctx> {
 
                 let initial_val = self.compile_expr_idx(initial)?;
                 let mut len_mul = i64_type.const_int(1, false);
-                let mut arr_types = vec![initial_val.get_type()];
                 let mut len_vals = vec![];
                 for x in len {
                     let x_val = self.compile_expr_idx(x)?.into_int_value();
                     len_vals.push(x_val);
                     len_mul = self.builder.build_int_mul(len_mul, x_val, "tmp")?;
-                    arr_types.push(arr_types.last().unwrap().ptr_type(AddressSpace::default()).into());
                 }
-                arr_types.reverse();
                 let all_array = self.builder.build_array_malloc(initial_val.get_type(), len_mul, "array")?;
 
                 let cur_func = self.cur_function.unwrap();
@@ -473,21 +470,23 @@ impl<'ctx> Compiler<'ctx> {
 
                 self.builder.position_at_end(after_block);
 
-                let array = self.build_array_initializer(0, i64_type.const_int(0, false), len_vals, arr_types, all_array)?;
+                let array = self.build_array_initializer(0, i64_type.const_int(0, false), len_vals, all_array)?;
                 Ok(array.into())
             },
         }
     }
 
-    pub(crate) fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, arr_types: Vec<BasicTypeEnum<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
+    pub(crate) fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
+        let ptr_type = self.context.ptr_type(AddressSpace::default());
+
         if i + 1 == len_vals.len() {
             unsafe {
-                let ptr = self.builder.build_in_bounds_gep(arr_types[i + 1], all_array, &[all_idx_val], "tmp")?;
+                let ptr = self.builder.build_in_bounds_gep(ptr_type, all_array, &[all_idx_val], "tmp")?;
                 return Ok(ptr);
             }
         }
         let i64_type = self.context.i64_type();
-        let array = self.builder.build_array_malloc(arr_types[i + 1], len_vals[i], "array")?;
+        let array = self.builder.build_array_malloc(ptr_type, len_vals[i], "array")?;
 
         let cur_func = self.cur_function.unwrap();
         let cond_block = self.context.append_basic_block(cur_func, "loopcond");
@@ -505,7 +504,7 @@ impl<'ctx> Compiler<'ctx> {
 
         self.builder.position_at_end(loop_block);
         unsafe {
-            let val = self.build_array_initializer(i + 1, self.builder.build_int_mul(idx_val, len_vals[i + 1], "tmp")?, len_vals, arr_types, all_array)?;
+            let val = self.build_array_initializer(i + 1, self.builder.build_int_mul(idx_val, len_vals[i + 1], "tmp")?, len_vals, all_array)?;
             let ptr = self.builder.build_in_bounds_gep(val.get_type(), array, &[idx_val], "tmp")?;
             self.builder.build_store(ptr, val)?;
         };
@@ -520,8 +519,8 @@ impl<'ctx> Compiler<'ctx> {
 
     pub(crate) fn build_str_struct(&mut self, len: IntValue<'ctx>, ptr: PointerValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
         let i64_type = self.context.i64_type();
-        let i8_type = self.context.i8_type();
-        let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
+        let ptr_type = self.context.ptr_type(AddressSpace::default());
+        let str_type = self.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
         let result = str_type.get_undef();
         let result = self.builder.build_insert_value(result, len, 0, "res")?;
         Ok(self.builder.build_insert_value(result, ptr, 1, "res")?.into_struct_value())
@@ -530,8 +529,8 @@ impl<'ctx> Compiler<'ctx> {
     pub(crate) fn build_str_concat(&mut self, lhs: StructValue<'ctx>, rhs: StructValue<'ctx>) -> CompileResult<StructValue<'ctx>> {
         let i64_type = self.context.i64_type();
         let i8_type = self.context.i8_type();
-        let i8_ptr_type = i8_type.ptr_type(AddressSpace::default());
-        let str_type = self.context.struct_type(&[i64_type.into(), i8_type.ptr_type(AddressSpace::default()).into()], false);
+        let ptr_type = self.context.ptr_type(AddressSpace::default());
+        let str_type = self.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
         let lhs_str_ptr = self.builder.build_alloca(str_type, "str")?;
         let rhs_str_ptr = self.builder.build_alloca(str_type, "str")?;
         self.builder.build_store(lhs_str_ptr, lhs)?;
@@ -540,12 +539,12 @@ impl<'ctx> Compiler<'ctx> {
         let lhs_len_ptr = self.builder.build_struct_gep(str_type, lhs_str_ptr, 0, "len")?;
         let lhs_ptr_ptr = self.builder.build_struct_gep(str_type, lhs_str_ptr, 1, "ptr")?;
         let lhs_len = self.builder.build_load(i64_type, lhs_len_ptr, "str")?.into_int_value();
-        let lhs_ptr = self.builder.build_load(i8_ptr_type, lhs_ptr_ptr, "str")?;
+        let lhs_ptr = self.builder.build_load(ptr_type, lhs_ptr_ptr, "str")?;
 
         let rhs_len_ptr = self.builder.build_struct_gep(str_type, rhs_str_ptr, 0, "len")?;
         let rhs_ptr_ptr = self.builder.build_struct_gep(str_type, rhs_str_ptr, 1, "ptr")?;
         let rhs_len = self.builder.build_load(i64_type, rhs_len_ptr, "str")?.into_int_value();
-        let rhs_ptr = self.builder.build_load(i8_ptr_type, rhs_ptr_ptr, "str")?;
+        let rhs_ptr = self.builder.build_load(ptr_type, rhs_ptr_ptr, "str")?;
 
         let new_len = self.builder.build_int_add(lhs_len, rhs_len, "add")?;
         let malloc_size = self.builder.build_int_add(new_len, i64_type.const_int(1, false), "size")?;
