@@ -1,0 +1,34 @@
+{
+    "name": "zoisite",
+    "image": "mcr.microsoft.com/devcontainers/base:0-focal",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "saoudrizwan.claude-dev"
+            ]
+        }
+    },
+    "remoteUser": "root",
+    "overrideFeatureInstallOrder": [
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages",
+        "ghcr.io/devcontainers/features/rust",
+        "ghcr.io/rapidsai/devcontainers/features/llvm",
+        "ghcr.io/devcontainers/features/node"
+    ],
+    "features": {
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+            "packages": [
+                "pkg-config",
+                "libzstd-dev"
+            ]
+        },
+        "ghcr.io/devcontainers/features/node:1": {},
+        "ghcr.io/rapidsai/devcontainers/features/rust:25": {
+            "version": "nightly-2025-04-29"
+        },
+        "ghcr.io/rapidsai/devcontainers/features/llvm:25": {
+            "version": "16"
+        }
+    },
+    "postCreateCommand": "cargo install cargo-fuzz cargo-insta"
+}
