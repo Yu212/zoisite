@@ -197,4 +197,14 @@ mod tests {
     fn ident() {
         insta::assert_debug_snapshot!(tokenize("a bc"));
     }
+
+    #[test]
+    fn unterminated_string() {
+        insta::assert_debug_snapshot!(tokenize("\"abc"));
+    }
+
+    #[test]
+    fn empty_char() {
+        insta::assert_debug_snapshot!(tokenize("''"));
+    }
 }

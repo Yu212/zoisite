@@ -1,0 +1,24 @@
+---
+source: crates/compiler/src/lexer.rs
+expression: "tokenize(\"\\\"abc\")"
+---
+(
+    [
+        Token {
+            kind: Error,
+            text: "\"abc",
+            range: 0..4,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 4..4,
+        },
+    ],
+    [
+        Diagnostic {
+            kind: UnterminatedStringLiteral,
+            range: 0..4,
+        },
+    ],
+)

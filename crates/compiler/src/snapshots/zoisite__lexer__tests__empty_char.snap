@@ -1,0 +1,24 @@
+---
+source: crates/compiler/src/lexer.rs
+expression: "tokenize(\"''\")"
+---
+(
+    [
+        Token {
+            kind: Error,
+            text: "''",
+            range: 0..2,
+        },
+        Token {
+            kind: Eof,
+            text: "",
+            range: 2..2,
+        },
+    ],
+    [
+        Diagnostic {
+            kind: EmptyCharLiteral,
+            range: 0..2,
+        },
+    ],
+)
