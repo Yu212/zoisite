@@ -33,7 +33,7 @@
 ## Function Definition
 
 ```bnf
-<function_definition> ::= "fun" <identifier> <parameter_list> ":" <type_specifier> <block_expression>
+<function_definition> ::= "fun" <identifier> <parameter_list> ":" <type_specifier> <block_expr>
 
 <parameter_list> ::= "(" [ <typed_identifier> ( "," <typed_identifier> )* ] ")"
 
@@ -71,7 +71,8 @@
 
 <primary_expr> ::= <literal>
                  | <identifier>
-                 | <paren_or_tuple_expr>
+                 | <paren_expr>
+                 | <tuple_expr>
                  | <block_expr>
                  | <array_literal>
                  | <if_expr>
@@ -84,7 +85,7 @@
 
 <if_expr> ::= "if" "(" <expression> ")" <expression> [ "else" <expression> ]
 
-<array_literal> ::= "[" <expression> ";" <expression> "]"
+<array_literal> ::= "[" <expression> ";" <expression> ( "," <expression> )* "]"
 ```
 
 ## Literals
@@ -94,14 +95,14 @@
             | <float_literal>
             | <string_literal>
             | <char_literal>
-            | <boolean_literal>
+            | <bool_literal>
             | <none_literal>
 
 <integer_literal> ::= <digit>+
 <float_literal> ::= <digit>+ "." <digit>*
 <string_literal> ::= '"' ( <character> )* '"'
 <char_literal> ::= "'" ( <character> ) "'"
-<boolean_literal> ::= "true" | "false"
+<bool_literal> ::= "true" | "false"
 <none_literal> ::= "none"
 ```
 
@@ -122,7 +123,7 @@
 ## Lexical Elements
 
 ```bnf
-<identifier> ::= <letter> ( <letter> | <digit> | "_" )*
+<identifier> ::= ( <letter> | "_" ) ( <letter> | <digit> | "_" )*
 <letter> ::= "a"..."z" | "A"..."Z"
 <digit> ::= "0"..."9"
 <character> ::= /* any valid character within strings/chars */
@@ -132,5 +133,5 @@
 ## Comments
 
 ```bnf
-<comment> ::= "//" /* any sequence of characters except newline */ <newline>
+<comment> ::= "//" /* any sequence of characters except newline */
 ```

@@ -212,7 +212,7 @@ pub fn lhs(p: &mut Parser<'_>) -> Option<(CompletedMarker, bool)> {
         SyntaxKind::Char => Some((char_literal(p), false)),
         SyntaxKind::OpenBracket => Some((array_literal(p), false)),
         SyntaxKind::Minus => Some((prefix_expr(p), false)),
-        SyntaxKind::OpenParen => Some((paren_expr(p), false)),
+        SyntaxKind::OpenParen => Some((paren_or_tuple_expr(p), false)),
         SyntaxKind::OpenBrace => Some((block_expr(p), true)),
         SyntaxKind::Ident if p.nth_at(1, SyntaxKind::OpenParen) => Some((fn_call_expr(p), false)),
         SyntaxKind::Ident => Some((ref_expr(p), false)),
@@ -234,7 +234,7 @@ pub fn prefix_expr(p: &mut Parser<'_>) -> CompletedMarker {
     m.complete(p, SyntaxKind::PrefixExpr)
 }
 
-pub fn paren_expr(p: &mut Parser<'_>) -> CompletedMarker {
+pub fn paren_or_tuple_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::OpenParen));
     let m = p.start();
     p.bump();
