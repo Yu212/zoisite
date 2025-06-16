@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn ketword() {
+    fn keyword() {
         insta::assert_debug_snapshot!(tokenize("let if else while break continue fun true false"));
     }
 

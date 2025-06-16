@@ -1,5 +1,5 @@
 ---
-source: src/lexer.rs
+source: crates/compiler/src/lexer.rs
 expression: "tokenize(\"let if else while break continue fun true false\")"
 ---
 (
