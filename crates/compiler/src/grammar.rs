@@ -6,6 +6,24 @@ use crate::token_set::TokenSet;
 const RECOVERY_SET: TokenSet = TokenSet::new(&[SyntaxKind::Semicolon]);
 const BOOL_SET: TokenSet = TokenSet::new(&[SyntaxKind::TrueKw, SyntaxKind::FalseKw]);
 
+fn comma_list<F>(p: &mut Parser<'_>, end: SyntaxKind, required: bool, mut f: F) -> bool
+where
+    F: FnMut(&mut Parser<'_>),
+{
+    let mut comma = false;
+    if required || !p.at(end) {
+        f(p);
+    }
+    while p.eat(SyntaxKind::Comma) {
+        comma = true;
+        if p.at(end) {
+            break;
+        }
+        f(p);
+    }
+    comma
+}
+
 pub fn root(p: &mut Parser<'_>) {
     let m = p.start();
     p.eat_trivia();
@@ -98,12 +116,7 @@ pub fn type_spec(p: &mut Parser<'_>) -> Option<CompletedMarker> {
         SyntaxKind::OpenParen => {
             let m = p.start();
             p.bump();
-            type_spec(p);
-            p.expect(SyntaxKind::Comma);
-            type_spec(p);
-            while p.eat(SyntaxKind::Comma) {
-                type_spec(p);
-            }
+            comma_list(p, SyntaxKind::CloseParen, true, |p| { type_spec(p); });
             p.expect(SyntaxKind::CloseParen);
             Some(m.complete(p, SyntaxKind::TupleTypeSpec))
         },
@@ -139,12 +152,7 @@ pub fn type_spec(p: &mut Parser<'_>) -> Option<CompletedMarker> {
 pub fn param_list(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.expect(SyntaxKind::OpenParen);
-    if !p.at(SyntaxKind::CloseParen) {
-        typed_ident(p, false);
-        while p.eat(SyntaxKind::Comma) {
-            typed_ident(p, false);
-        }
-    }
+    comma_list(p, SyntaxKind::CloseParen, false, |p| { typed_ident(p, false); });
     p.expect(SyntaxKind::CloseParen);
     m.complete(p, SyntaxKind::ParamList)
 }
@@ -155,17 +163,8 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     let mut tuple = false;
     if p.eat(SyntaxKind::OpenParen) {
-        if !p.at(SyntaxKind::CloseParen) {
-            typed_ident(p, true);
-            while p.eat(SyntaxKind::Comma) {
-                if p.at(SyntaxKind::CloseParen) {
-                    break;
-                }
-                typed_ident(p, true);
-            }
-        }
+        tuple = comma_list(p, SyntaxKind::CloseParen, true, |p| { typed_ident(p, true); });
         p.expect(SyntaxKind::CloseParen);
-        tuple = true;
     } else {
         typed_ident(p, true);
     }
@@ -257,15 +256,7 @@ pub fn paren_or_tuple_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::OpenParen));
     let m = p.start();
     p.bump();
-    expr(p, 0);
-    let mut comma = false;
-    while p.eat(SyntaxKind::Comma) {
-        comma = true;
-        if p.at(SyntaxKind::CloseParen) {
-            break;
-        }
-        expr(p, 0);
-    }
+    let comma = comma_list(p, SyntaxKind::CloseParen, true, |p| { expr(p, 0); });
     p.expect(SyntaxKind::CloseParen);
     if comma {
         m.complete(p, SyntaxKind::TupleExpr)
@@ -302,12 +293,7 @@ pub fn fn_call_expr(p: &mut Parser<'_>) -> CompletedMarker {
     let m = p.start();
     p.bump();
     p.expect(SyntaxKind::OpenParen);
-    if !p.at(SyntaxKind::CloseParen) {
-        expr(p, 0);
-        while p.eat(SyntaxKind::Comma) {
-            expr(p, 0);
-        }
-    }
+    comma_list(p, SyntaxKind::CloseParen, false, |p| { expr(p, 0); });
     p.expect(SyntaxKind::CloseParen);
     m.complete(p, SyntaxKind::FnCallExpr)
 }
@@ -380,10 +366,7 @@ pub fn array_literal(p: &mut Parser<'_>) -> CompletedMarker {
     p.bump();
     expr(p, 0);
     p.expect(SyntaxKind::Semicolon);
-    expr(p, 0);
-    while p.eat(SyntaxKind::Comma) {
-        expr(p, 0);
-    }
+    comma_list(p, SyntaxKind::CloseBracket, true, |p| { expr(p, 0); });
     p.expect(SyntaxKind::CloseBracket);
     m.complete(p, SyntaxKind::ArrayLiteral)
 }
