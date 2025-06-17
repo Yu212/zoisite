@@ -18,11 +18,9 @@
               | <empty_statement>
               | <function_definition>
 
-<let_statement> ::= "let" ( <identifier> | <typed_identifier> ) "=" <expression> ";"
+<let_statement> ::= "let" <typed_identifier> "=" <expression> ";"
 
-<let_tuple_statement> ::= "let" "(" <pattern_element> ( "," <pattern_element> )* [ "," ] ")" "=" <expression> ";"
-
-<pattern_element> ::= <identifier> [ ":" <type_specifier> ]
+<let_tuple_statement> ::= "let" "(" <typed_identifier> ( "," <typed_identifier> )* [ "," ] ")" "=" <expression> ";"
 
 <while_statement> ::= "while" "(" <expression> ")" <expression>
 
@@ -42,7 +40,7 @@
 
 <parameter_list> ::= "(" [ <typed_identifier> ( "," <typed_identifier> )* ] ")"
 
-<typed_identifier> ::= <identifier> ":" <type_specifier>
+<typed_identifier> ::= <identifier> [ ":" <type_specifier> ]
 ```
 
 ## Expressions
