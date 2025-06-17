@@ -10,6 +10,7 @@
 
 ```bnf
 <statement> ::= <let_statement>
+              | <let_tuple_statement>
               | <while_statement>
               | <break_statement>
               | <continue_statement>
@@ -18,6 +19,10 @@
               | <function_definition>
 
 <let_statement> ::= "let" ( <identifier> | <typed_identifier> ) "=" <expression> ";"
+
+<let_tuple_statement> ::= "let" "(" <pattern_element> ( "," <pattern_element> )* [ "," ] ")" "=" <expression> ";"
+
+<pattern_element> ::= <identifier> [ ":" <type_specifier> ]
 
 <while_statement> ::= "while" "(" <expression> ")" <expression>
 
@@ -47,7 +52,9 @@
 
 <assignment_expr> ::= <lvalue> "=" <expression>
 
-<lvalue> ::= <identifier> | <lvalue> <index_suffix>
+<lvalue> ::= <identifier>
+           | <lvalue> <index_suffix>
+           | "(" <lvalue> ( "," <lvalue> )* [ "," ] ")"
 
 <logical_expr> ::= <comparison_expr> ( ( "&&" | "||" ) <comparison_expr> )*
 
@@ -79,7 +86,7 @@
 
 <paren_expr> ::= "(" <expression> ")"
 
-<tuple_expr> ::= "(" <expression> ( "," <expression> )+ ")"
+<tuple_expr> ::= "(" <expression> ( "," <expression> )* [ "," ] ")"
 
 <block_expr> ::= "{" <statement>* [ <expression> ] "}"
 

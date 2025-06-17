@@ -178,6 +178,17 @@ impl Visitor for TypeInfer<'_> {
                     walk_stmt_idx(self, idx);
                 }
             }
+            Stmt::LetTupleStmt { var_ids, expr, range } => {
+                let mut var_tys = Vec::new();
+                for &var_id in &var_ids {
+                    if let Some(var_id) = var_id {
+                        var_tys.push(self.define_var(var_id, range));
+                    }
+                }
+                walk_stmt_idx(self, idx);
+                let expr_ty = self.inferred.expr_ty(expr);
+                self.unify(&Type::Tuple(var_tys), &expr_ty, range);
+            }
             Stmt::WhileStmt { .. } => walk_stmt_idx(self, idx),
             Stmt::BreakStmt { .. } => walk_stmt_idx(self, idx),
             Stmt::ContinueStmt { .. } => walk_stmt_idx(self, idx),

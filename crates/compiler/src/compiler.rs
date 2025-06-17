@@ -115,6 +115,25 @@ impl<'ctx> Compiler<'ctx> {
                 self.addresses.insert(var_id, addr);
                 Ok(i8_type.const_int(0, false).into())
             },
+            Stmt::LetTupleStmt { var_ids, expr, range: _ } => {
+                let struct_ty = self.compile_ty(&self.type_inferred.expr_ty(expr))?.into_struct_type();
+                let val_str = self.compile_expr_idx(expr)?;
+                let i8_type = self.context.i8_type();
+                let val_ptr = self.builder.build_alloca(struct_ty, "ptr")?;
+                self.builder.build_store(val_ptr, val_str)?;
+                for (i, var_id) in var_ids.iter().enumerate() {
+                    if let Some(var_id) = var_id {
+                        let var_info = self.db.resolve_ctx.get_var(*var_id);
+                        let ty = self.compile_ty(&var_info.ty.borrow())?;
+                        let addr = self.builder.build_alloca(ty, var_info.name.as_str())?;
+                        let field_ptr = self.builder.build_struct_gep(struct_ty, val_ptr, i as u32, "tmp")?;
+                        let field_val = self.builder.build_load(ty, field_ptr, "tmp")?;
+                        self.builder.build_store(addr, field_val)?;
+                        self.addresses.insert(*var_id, addr);
+                    }
+                }
+                Ok(i8_type.const_int(0, false).into())
+            },
             Stmt::WhileStmt { cond, block, range: _ } => {
                 let i8_type = self.context.i8_type();
                 let cur_func = self.cur_function.unwrap();
@@ -186,43 +205,6 @@ impl<'ctx> Compiler<'ctx> {
         Ok(())
     }
 
-    pub(crate) fn compile_lvalue(&mut self, expr: Expr) -> CompileResult<PointerValue<'ctx>> {
-        match expr {
-            Expr::Ref { var_id, range: _ } => {
-                let var_id = var_id.ok_or(self.compiler_error("var"))?;
-                Ok(self.addresses[&var_id])
-            },
-            Expr::Index { main_expr, index_expr, range: _ } => {
-                let main_ty = &self.type_inferred.expr_ty(main_expr);
-                if main_ty == &Type::Str {
-                    let i64_type = self.context.i64_type();
-                    let i8_type = self.context.i8_type();
-                    let ptr_type = self.context.ptr_type(AddressSpace::default());
-                    let str_type = self.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
-
-                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
-                    let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
-
-                    let ptr_ptr = self.builder.build_struct_gep(str_type, lvalue, 1, "ptr")?;
-                    let ptr = self.builder.build_load(ptr_type, ptr_ptr, "str")?;
-                    let val_ptr = unsafe { self.builder.build_gep(i8_type, ptr.into_pointer_value(), &[index_val], "ptr")? };
-
-                    Ok(val_ptr)
-                } else {
-                    let inner_ty = main_ty.inner_ty().ok_or(self.compiler_error("Indexed values do not have an inner type"))?;
-                    let inner_ty = self.compile_ty(&inner_ty)?;
-                    let main_ty = self.compile_ty(main_ty)?;
-                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
-                    let main_val = self.builder.build_load(main_ty, lvalue, "tmp")?.into_pointer_value();
-                    let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
-                    let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr")? };
-                    Ok(val_ptr)
-                }
-            },
-            _ => unreachable!()
-        }
-    }
-
     pub(crate) fn compile_expr_idx(&mut self, idx: ExprIdx) -> CompileResult<BasicValueEnum<'ctx>> {
         self.compile_expr(idx, self.db.exprs[idx].clone())
     }
@@ -235,9 +217,8 @@ impl<'ctx> Compiler<'ctx> {
                 let rhs_ty = &self.type_inferred.expr_ty(rhs);
                 match (&op, lhs_ty, rhs_ty) {
                     (BinaryOp::Assign, _, _) => {
-                        let ptr = self.compile_lvalue(self.db.exprs[lhs].clone())?;
                         let rhs_value = self.compile_expr_idx(rhs)?;
-                        self.builder.build_store(ptr, rhs_value)?;
+                        self.build_assign(lhs, rhs_value)?;
                         Ok(rhs_value)
                     },
                     (BinaryOp::Add, Type::Str, Type::Str) => {
@@ -321,12 +302,13 @@ impl<'ctx> Compiler<'ctx> {
             },
             Expr::Tuple { elements, range: _ } => {
                 let struct_ty = self.compile_ty(&self.type_inferred.expr_ty(idx))?;
-                let val = self.builder.build_malloc(struct_ty, "val")?;
+                let val_ptr = self.builder.build_alloca(struct_ty, "val")?;
                 for (i, &expr) in elements.iter().enumerate() {
-                    let ptr = self.builder.build_struct_gep(struct_ty, val, i as u32, "tmp")?;
+                    let ptr = self.builder.build_struct_gep(struct_ty, val_ptr, i as u32, "tmp")?;
                     let element = self.compile_expr_idx(expr)?;
                     self.builder.build_store(ptr, element)?;
                 }
+                let val = self.builder.build_load(struct_ty, val_ptr, "tmp")?;
                 Ok(val.into())
             },
             Expr::If { cond, then_expr, else_expr, range: _ } => {
@@ -476,7 +458,66 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub(crate) fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
+    pub(crate) fn compile_lvalue(&mut self, expr: Expr) -> CompileResult<PointerValue<'ctx>> {
+        match expr {
+            Expr::Ref { var_id, range: _ } => {
+                let var_id = var_id.ok_or(self.compiler_error("var"))?;
+                Ok(self.addresses[&var_id])
+            },
+            Expr::Index { main_expr, index_expr, range: _ } => {
+                let main_ty = &self.type_inferred.expr_ty(main_expr);
+                if main_ty == &Type::Str {
+                    let i64_type = self.context.i64_type();
+                    let i8_type = self.context.i8_type();
+                    let ptr_type = self.context.ptr_type(AddressSpace::default());
+                    let str_type = self.context.struct_type(&[i64_type.into(), ptr_type.into()], false);
+
+                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
+                    let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
+
+                    let ptr_ptr = self.builder.build_struct_gep(str_type, lvalue, 1, "ptr")?;
+                    let ptr = self.builder.build_load(ptr_type, ptr_ptr, "str")?;
+                    let val_ptr = unsafe { self.builder.build_gep(i8_type, ptr.into_pointer_value(), &[index_val], "ptr")? };
+
+                    Ok(val_ptr)
+                } else {
+                    let inner_ty = main_ty.inner_ty().ok_or(self.compiler_error("Indexed values do not have an inner type"))?;
+                    let inner_ty = self.compile_ty(&inner_ty)?;
+                    let main_ty = self.compile_ty(main_ty)?;
+                    let lvalue = self.compile_lvalue(self.db.exprs[main_expr].clone())?;
+                    let main_val = self.builder.build_load(main_ty, lvalue, "tmp")?.into_pointer_value();
+                    let index_val = self.compile_expr_idx(index_expr)?.into_int_value();
+                    let val_ptr = unsafe { self.builder.build_gep(inner_ty, main_val, &[index_val], "ptr")? };
+                    Ok(val_ptr)
+                }
+            },
+            _ => unreachable!()
+        }
+    }
+
+    fn build_assign(&mut self, lhs_idx: ExprIdx, rhs_value: BasicValueEnum<'ctx>) -> CompileResult<()> {
+        match self.db.exprs[lhs_idx].clone() {
+            Expr::Tuple { elements, .. } => {
+                let struct_ty = self.compile_ty(&self.type_inferred.expr_ty(lhs_idx))?.into_struct_type();
+                let val_ptr = self.builder.build_alloca(struct_ty, "ptr")?;
+                self.builder.build_store(val_ptr, rhs_value)?;
+                for (i, elem_idx) in elements.into_iter().enumerate() {
+                    let field_ptr = self.builder.build_struct_gep(struct_ty, val_ptr, i as u32, "tmp")?;
+                    let field_ty = self.compile_ty(&self.type_inferred.expr_ty(elem_idx))?;
+                    let field_val = self.builder.build_load(field_ty, field_ptr, "tmp")?;
+                    self.build_assign(elem_idx, field_val)?;
+                }
+                Ok(())
+            }
+            _ => {
+                let ptr = self.compile_lvalue(self.db.exprs[lhs_idx].clone())?;
+                self.builder.build_store(ptr, rhs_value)?;
+                Ok(())
+            }
+        }
+    }
+
+    fn build_array_initializer(&mut self, i: usize, all_idx_val: IntValue<'ctx>, len_vals: Vec<IntValue<'ctx>>, all_array: PointerValue<'ctx>) -> CompileResult<PointerValue<'ctx>> {
         let ptr_type = self.context.ptr_type(AddressSpace::default());
 
         if i + 1 == len_vals.len() {

@@ -40,6 +40,9 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, node: Stmt) {
         Stmt::LetStmt { var_id: _, expr, range: _ } => {
             visitor.visit_expr_idx(expr);
         }
+        Stmt::LetTupleStmt { var_ids: _, expr, range: _ } => {
+            visitor.visit_expr_idx(expr);
+        }
         Stmt::WhileStmt { cond, block, range: _ } => {
             visitor.visit_expr_idx(cond);
             visitor.visit_expr_idx(block);

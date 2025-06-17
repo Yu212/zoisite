@@ -153,10 +153,29 @@ pub fn let_stmt(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(SyntaxKind::LetKw));
     let m = p.start();
     p.bump();
-    typed_ident(p, true);
+    let mut tuple = false;
+    if p.eat(SyntaxKind::OpenParen) {
+        if !p.at(SyntaxKind::CloseParen) {
+            typed_ident(p, true);
+            while p.eat(SyntaxKind::Comma) {
+                if p.at(SyntaxKind::CloseParen) {
+                    break;
+                }
+                typed_ident(p, true);
+            }
+        }
+        p.expect(SyntaxKind::CloseParen);
+        tuple = true;
+    } else {
+        typed_ident(p, true);
+    }
     p.expect(SyntaxKind::Equals);
     expr(p, 0);
-    m.complete(p, SyntaxKind::LetStmt)
+    if tuple {
+        m.complete(p, SyntaxKind::LetTupleStmt)
+    } else {
+        m.complete(p, SyntaxKind::LetStmt)
+    }
 }
 
 pub fn expr(p: &mut Parser<'_>, min_binding_power: i8) -> Option<(CompletedMarker, bool)> {
@@ -241,8 +260,11 @@ pub fn paren_or_tuple_expr(p: &mut Parser<'_>) -> CompletedMarker {
     expr(p, 0);
     let mut comma = false;
     while p.eat(SyntaxKind::Comma) {
-        expr(p, 0);
         comma = true;
+        if p.at(SyntaxKind::CloseParen) {
+            break;
+        }
+        expr(p, 0);
     }
     p.expect(SyntaxKind::CloseParen);
     if comma {

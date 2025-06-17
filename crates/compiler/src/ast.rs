@@ -78,6 +78,7 @@ asts! {
     Stmt [
         EmptyStmt,
         LetStmt,
+        LetTupleStmt,
         WhileStmt,
         BreakStmt,
         ContinueStmt,
@@ -141,16 +142,29 @@ impl FuncDef {
 }
 
 impl LetStmt {
+    pub fn typed_ident(&self) -> Option<TypedIdent> {
+        self.0.children().find_map(TypedIdent::cast)
+    }
+
     pub fn name(&self) -> Option<SyntaxToken> {
-        self.0.children().find_map(TypedIdent::cast).and_then(|typed_ident| typed_ident.ident())
+        self.typed_ident().and_then(|ti| ti.ident())
     }
 
     pub fn type_spec(&self) -> Option<TypeSpec> {
-        self.0.children().find_map(TypedIdent::cast)
-            .and_then(|typed_ident| typed_ident.type_spec())
+        self.typed_ident().and_then(|ti| ti.type_spec())
     }
 
-    pub fn expr(&self) -> Option<Expr> {
+    pub fn initializer(&self) -> Option<Expr> {
+        self.0.children().find_map(Expr::cast)
+    }
+}
+
+impl LetTupleStmt {
+    pub fn pattern(&self) -> impl Iterator<Item = TypedIdent> {
+        self.0.children().filter_map(TypedIdent::cast)
+    }
+
+    pub fn initializer(&self) -> Option<Expr> {
         self.0.children().find_map(Expr::cast)
     }
 }
@@ -349,3 +363,4 @@ impl TypedIdent {
         self.0.children().find_map(TypeSpec::cast)
     }
 }
+

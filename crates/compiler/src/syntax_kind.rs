@@ -73,6 +73,7 @@ pub enum SyntaxKind {
     Stmt,
     EmptyStmt,
     LetStmt,
+    LetTupleStmt,
     WhileStmt,
     BreakStmt,
     ContinueStmt,

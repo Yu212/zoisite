@@ -65,6 +65,7 @@ impl Database {
         match ast {
             ast::Stmt::EmptyStmt(ast) => self.lower_empty_stmt(ast),
             ast::Stmt::LetStmt(ast) => self.lower_let_stmt(ast),
+            ast::Stmt::LetTupleStmt(ast) => self.lower_let_tuple_stmt(ast),
             ast::Stmt::WhileStmt(ast) => self.lower_while_stmt(ast),
             ast::Stmt::BreakStmt(ast) => self.lower_break_stmt(ast),
             ast::Stmt::ContinueStmt(ast) => self.lower_continue_stmt(ast),
@@ -78,16 +79,33 @@ impl Database {
         }
     }
     pub fn lower_let_stmt(&mut self, ast: ast::LetStmt) -> Stmt {
-        let expr = self.lower_expr(ast.expr());
-        let name = self.lower_ident(ast.name());
-        let ty = ast.type_spec().map(|type_spec| self.lower_type(Some(type_spec)));
-        let var_id = if let Some(name) = name {
+        let expr = self.lower_expr(ast.initializer());
+        let var_id = if let Some(name) = self.lower_ident(ast.name()) {
+            let ty = ast.type_spec().map(|ts| self.lower_type(Some(ts)));
             Some(self.resolve_ctx.define_var(name.clone().name, Some(name), ty))
         } else {
             None
         };
         Stmt::LetStmt {
             var_id,
+            expr,
+            range: ast.syntax().text_range(),
+        }
+    }
+    pub fn lower_let_tuple_stmt(&mut self, ast: ast::LetTupleStmt) -> Stmt {
+        let expr = self.lower_expr(ast.initializer());
+        let mut var_ids = Vec::new();
+        for element in ast.pattern() {
+            let var_id = if let Some(ident) = self.lower_ident(element.ident()) {
+                let ty = element.type_spec().map(|ts| self.lower_type(Some(ts)));
+                Some(self.resolve_ctx.define_var(ident.name.clone(), Some(ident), ty))
+            } else {
+                None
+            };
+            var_ids.push(var_id);
+        }
+        Stmt::LetTupleStmt {
+            var_ids,
             expr,
             range: ast.syntax().text_range(),
         }
@@ -184,6 +202,7 @@ impl Database {
         match self.exprs[*expr] {
             Expr::Ref { var_id: _, range: _ } => true,
             Expr::Index { main_expr, index_expr: _, range: _ } => self.is_lvalue(&main_expr),
+            Expr::Tuple { ref elements, range: _ } => elements.iter().all(|e| self.is_lvalue(e)),
             _ => false,
         }
     }

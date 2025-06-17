@@ -32,6 +32,11 @@ pub enum Stmt {
         expr: ExprIdx,
         range: TextRange,
     },
+    LetTupleStmt {
+        var_ids: Vec<Option<VarId>>,
+        expr: ExprIdx,
+        range: TextRange,
+    },
     WhileStmt {
         cond: ExprIdx,
         block: ExprIdx,
