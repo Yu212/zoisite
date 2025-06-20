@@ -309,7 +309,7 @@ impl<'ctx> Compiler<'ctx> {
                     self.builder.build_store(ptr, element)?;
                 }
                 let val = self.builder.build_load(struct_ty, val_ptr, "tmp")?;
-                Ok(val.into())
+                Ok(val)
             },
             Expr::If { cond, then_expr, else_expr, range: _ } => {
                 let i8_type = self.context.i8_type();
